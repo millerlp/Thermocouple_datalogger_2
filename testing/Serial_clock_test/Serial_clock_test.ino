@@ -4,7 +4,13 @@
  * Luke Miller June 2017
  * 
  * Test functionality of the serial monitor, buttons,
- * real time clock etc. 
+ * real time clock, OLED displays.
+ * 
+ * This assumes you have 2 OLED 128x64 SSD1306 displays
+ * attached, and that one uses the default 0x3C I2C address
+ * while the other has been altered via soldering to use the
+ * 0x3D I2C address. These may be labeled 0x78 and 0x7A on 
+ * some knock-off boards. 
  * 
  */
 
