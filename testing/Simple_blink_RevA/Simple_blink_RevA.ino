@@ -6,8 +6,8 @@
  *  
  */
 
-#define REDLED A2 # Using the arduino pin names (A2, A3)
-#define GRNLED A3 # Using the arduino pin names (A2, A3)
+#define REDLED A2 // Using the arduino pin names (A2, A3)
+#define GRNLED A3 // Using the arduino pin names (A2, A3)
  
 void setup() {
   pinMode(REDLED, OUTPUT);
