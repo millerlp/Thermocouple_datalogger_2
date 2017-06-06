@@ -50,7 +50,7 @@
 #include <avr/wdt.h>
 //******************************
 // Data collection rate, enter a value here of 4, 2, or 1 (samples per second)
-#define SAMPLES_PER_SECOND 2 // number of samples taken per second (4, 2, or 1)
+#define SAMPLES_PER_SECOND 1 // number of samples taken per second (4, 2, or 1)
 //******************************
 
 #define ERRLED A2		// Red error LED pin
@@ -614,6 +614,8 @@ void loop() {
 			// Increment loopCount after writing all the sample data to
 			// the arrays
 			++loopCount; 
+      Serial.println(loopCount);
+      delay(10);
 				
 			// bitSet(PIND, 4); // toggle off, for monitoring on o-scope
 			// delay(1);
