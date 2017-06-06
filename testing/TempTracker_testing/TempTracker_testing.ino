@@ -50,8 +50,13 @@
 #include <avr/wdt.h>
 //******************************
 // Data collection rate, enter a value here of 4, 2, or 1 (samples per second)
-#define SAMPLES_PER_SECOND 1 // number of samples taken per second (4, 2, or 1)
+#define SAMPLES_PER_SECOND 2 // number of samples taken per second (4, 2, or 1)
 //******************************
+// Define the number of samples per sensor to average (moving average window)
+#define AVG_WINDOW 4
+// Define the interval (seconds) between saved values (writing to SD card)
+#define SAVE_INTERVAL 5 // units of seconds
+
 
 #define ERRLED A2		// Red error LED pin
 #define GREENLED A3		// Green LED pin
@@ -142,7 +147,7 @@ double temp7 = 0; // hold output from MAX31855 #7
 
 
 // Declare data arrays
-double tempArray[SAMPLES_PER_SECOND][8]; // store temperature values 128bytes
+double tempArray[AVG_WINDOW][8]; // store temperature values 128bytes
 double tempAverages[8]; // store average of each sensor's last few readings
 
 // Declare initial name for output files written to SD card
@@ -342,7 +347,7 @@ void setup() {
   }
 
 //   Take 4 temperature measurements to initialize the array
-  for (byte i = 0; i < 4; i++){
+  for (byte i = 0; i < AVG_WINDOW; i++){
     tempArray[i][0] = thermocouple0.readCelsius(); delay(15);
     tempArray[i][1] = thermocouple1.readCelsius(); delay(15);
     tempArray[i][2] = thermocouple2.readCelsius(); delay(15);
@@ -356,12 +361,12 @@ void setup() {
   // Now calculate the average of the 4 readings for each sensor i
   for (byte i = 0; i<8; i++){
     double tempsum = 0;
-    for (byte j = 0; j < 4; j++){
+    for (byte j = 0; j < AVG_WINDOW; j++){
       // Add up j measurements for sensor i
       tempsum += tempArray[j][i];
     }
     // Calculate average temperature for sensor i
-    tempAverages[i] = tempsum / double(4); // cast denominator as double
+    tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
   }
 
   oled1.home();
@@ -511,14 +516,14 @@ void loop() {
 			// Check to see if the current seconds value
 			// is equal to oldtime.second(). If so, we
 			// are still in the same second. 
-//     if ( abs(newtime.second() - oldtime.second()) >= 1) {
-			if (oldtime.second() != newtime.second()) {
+     if ( abs(newtime.second() - oldtime.second()) >= SAVE_INTERVAL) {
+//			if (oldtime.second() != newtime.second()) {
 				oldtime = newtime; // update oldtime
         writeFlag = true; // set flag to write data to SD				
         // This will force a SD card write once per second
 			}
 
-      if (loopCount >= 4){
+      if (loopCount >= AVG_WINDOW){
         loopCount = 0; // reset to beging writing at start of array
       }
       
@@ -533,10 +538,11 @@ void loop() {
 			}
 
 //      Serial.print(F("Reading "));
+      Serial.println();
       Serial.print(loopCount);
       Serial.print(F(" "));
-      printTimeSerial(newtime);
-      Serial.println();
+//      printTimeSerial(newtime);
+      
       // Read each of the sensors
       tempArray[loopCount][0] = thermocouple0.readCelsius();
       tempArray[loopCount][1] = thermocouple1.readCelsius();
@@ -552,12 +558,12 @@ void loop() {
         // Calculate the average of the 4 readings for each sensor i
         for (byte i = 0; i < 8; i++){
           double tempsum = 0;
-          for (byte j = 0; j < 4; j++){
+          for (byte j = 0; j < AVG_WINDOW; j++){
             // Add up j measurements for sensor i
             tempsum = tempsum + tempArray[j][i];
           }
           // Calculate average temperature for sensor i
-          tempAverages[i] = tempsum / double(4); // cast denominator as double
+          tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
         }
 
         // Call the writeToSD function to output the data array contents
@@ -577,7 +583,7 @@ void loop() {
         Serial.println();
 
 //        delay(10);
-//        Serial.println();A
+//        Serial.println();
         delay(10);
 
 #endif          
@@ -614,8 +620,8 @@ void loop() {
 			// Increment loopCount after writing all the sample data to
 			// the arrays
 			++loopCount; 
-      Serial.println(loopCount);
-      delay(10);
+//      Serial.println(loopCount);
+//      delay(10);
 				
 			// bitSet(PIND, 4); // toggle off, for monitoring on o-scope
 			// delay(1);
