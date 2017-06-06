@@ -179,14 +179,15 @@ double temp7 = 0; // hold output from MAX31855 #7
 
 // Declare data arrays
 uint32_t unixtimeArray[SAMPLES_PER_SECOND]; // store unixtime values temporarily
-byte fracSecArray[SAMPLES_PER_SECOND]; // store fracSec values temporarily
+//byte fracSecArray[SAMPLES_PER_SECOND]; // store fracSec values temporarily
+double tempArray[SAMPLES_PER_SECOND][8]; // store temperature values 128bytes
 //int accelcompass1Array[SAMPLES_PER_SECOND][6]; // store accel/compass1 values
 //int accelcompass2Array[SAMPLES_PER_SECOND][6]; // store accel/compass2 values
 
 // Declare initial name for output files written to SD card
-char filename[] = "YYYYMMDD_HHMM_00_SN00.csv";
+char filename[] = "YYYYMMDD_HHMM_00.csv";
 // Define initial name of calibration file for accelerometers
-char filenameCalib[] = "CAL0_YYYYMMDD_HHMM_00_SN00.csv";
+char filenameCalib[] = "CAL0_YYYYMMDD_HHMM_00.csv";
 //// Placeholder serialNumber
 //char serialNumber[] = "SN00";
 // Define a flag to show whether the serialNumber value is real or just zeros
@@ -295,11 +296,13 @@ void setup() {
   oled1.set400kHz();  
   oled1.setFont(Adafruit5x7);    
   oled1.clear(); 
+  oled1.print(F("Hello"));
   // Start up the 2nd oled display
   oled2.begin(&Adafruit128x64, I2C_ADDRESS2);
   oled2.set400kHz();  
   oled2.setFont(Adafruit5x7);    
   oled2.clear();
+  oled2.print(F("There"));
   //----------------------------------
   bool rtcErrorFlag = false;
 
@@ -308,14 +311,31 @@ void setup() {
 	rtc.begin();	// Start the rtc object with default options
 	newtime = rtc.now(); // read a time from the real time clock
   newtime.toString(buf, 20); 
+  // Now extract the time by making another character pointer that
+  // is advanced 10 places into buf to skip over the date. 
+  char *timebuf = buf + 10;
+  
 	printTimeSerial(rtc.now()); // print time to serial monitor
+  
+  oled1.println();
+  oled1.set2X();
+  for (int i = 0; i<11; i++){
+    oled1.print(buf[i]);
+  }
+  oled2.println();
+  oled2.set2X();
+  oled2.print(timebuf);
+  
 	Serial.println();
 	if ( (newtime.year() < 2017) | (newtime.year() > 2035) ) {
 		// There is an error with the clock, halt everything
     oled1.home();
+    oled1.clear();
+    oled1.set1X();
     oled1.println(F("RTC ERROR"));
     oled1.println(buf);
     oled1.println(F("RTC ERROR"));
+    oled1.println(F("Continue?"));
 
     rtcErrorFlag = true;
     // Consider removing this while loop and allowing user to plow
@@ -328,8 +348,8 @@ void setup() {
 		}	
 	}
 
-//*************************************************************
-// SD card setup and read (assumes Serial output is functional already)
+  //*************************************************************
+  // SD card setup and read (assumes Serial output is functional already)
   bool sdErrorFlag = false;
 	pinMode(chipSelect, OUTPUT);  // set chip select pin for SD card to output
 	// Initialize the SD card object
@@ -344,6 +364,7 @@ void setup() {
     oled1.println(F("SD ERROR"));
     oled1.println();
     oled1.println(F("SD ERROR"));
+    oled1.println(F("Continue?"));
 
     sdErrorFlag = true;
     // Consider removing this while loop and allowing user to plow
@@ -368,8 +389,30 @@ void setup() {
 #ifdef ECHO_TO_SERIAL    
     Serial.print("Writing to ");
     Serial.println(filename);
-#endif      
+#endif
+    oled1.home();
+    oled1.set1X();
+    oled1.clearToEOL();
+    oled1.print(F("Writing to: "));
+    oled2.home();
+    oled2.set1X();
+    oled2.clearToEOL();
+    oled2.print(filename);
+    delay(1000);
+          
   }
+
+  // Take 4 temperature measurements to initialize the array
+//  for (int i = 0; i < 4; i++){
+//    tempArray[i][0] = thermocouple0.readCelsius();
+//    tempArray[i][1] = thermocouple1.readCelsius();
+//    tempArray[i][2] = thermocouple2.readCelsius();
+//    tempArray[i][3] = thermocouple3.readCelsius();
+//    tempArray[i][4] = thermocouple4.readCelsius();
+//    tempArray[i][5] = thermocouple5.readCelsius();
+//    tempArray[i][6] = thermocouple6.readCelsius();
+//    tempArray[i][7] = thermocouple7.readCelsius();
+//  }
 	
 	// Start 32.768kHz clock signal on TIMER2. 
 	// Supply the current time value as the argument, returns 
@@ -517,7 +560,7 @@ void loop() {
 			
 			// Save current time to unixtimeArray
 			unixtimeArray[loopCount] = newtime.unixtime();
-			fracSecArray[loopCount] = fracSec;
+//			fracSecArray[loopCount] = fracSec;
 
 			if (fracSec == 0) {
 				// We only read the thermocouples and hall effect sensors
@@ -574,6 +617,44 @@ void loop() {
         // to screens if they are on. 
         if (oledScreenOn){
           // Print stuff to screens
+          oled1.home();
+          oled1.set2X();
+          oled1.clearToEOL();
+          oled1.print(F("Ch0: "));
+          oled1.print(temp0);
+          oled1.println(F("C"));
+          oled1.clearToEOL();
+          oled1.print(F("Ch1: "));
+          oled1.print(temp1);
+          oled1.println(F("C"));
+          oled1.clearToEOL();
+          oled1.print(F("Ch2: "));
+          oled1.print(temp2);
+          oled1.println(F("C"));
+          oled1.clearToEOL();
+          oled1.print(F("Ch3: "));
+          oled1.print(temp3);
+          oled1.println(F("C"));
+
+          oled2.home();
+          oled2.set2X();
+          oled2.clearToEOL();
+          oled2.print(F("Ch4: "));
+          oled2.print(temp4);
+          oled2.println(F("C"));
+          oled2.clearToEOL();
+          oled2.print(F("Ch5: "));
+          oled2.print(temp5);
+          oled2.println(F("C"));
+          oled2.clearToEOL();
+          oled2.print(F("Ch6: "));
+          oled2.print(temp6);
+          oled2.println(F("C"));
+          oled2.clearToEOL();
+          oled2.print(F("Ch7: "));
+          oled2.print(temp7);
+          oled2.println(F("C"));
+          
         }
 				
 #ifdef ECHO_TO_SERIAL
@@ -584,7 +665,7 @@ void loop() {
 				Serial.print(F(" Temp0: "));
 				Serial.print(temp0);
 
-				Serial.print(F("Temp1: "));
+				Serial.print(F(" Temp1: "));
 				Serial.print(temp1);
 
 				delay(10);
@@ -873,7 +954,7 @@ void button2Func (void){
 // initFileName - a function to create a filename for the SD card based
 // on the 4-digit year, month, day, hour, minutes and a 2-digit counter. 
 // The character array 'filename' was defined as a global array 
-// at the top of the sketch in the form "YYYYMMDD_HHMM_00_SN00.csv"
+// at the top of the sketch in the form "YYYYMMDD_HHMM_00.csv"
 void initFileName(DateTime time1) {
 	
 	char buf[5];
@@ -920,15 +1001,7 @@ void initFileName(DateTime time1) {
 	}
 	// Insert another underscore after time
 	filename[13] = '_';
-	// If there is a valid serialnumber, insert it into 
-	// the file name in positions 17-20. 
-//	if (serialValid) {
-//		byte serCount = 0;
-//		for (byte i = 17; i < 21; i++){
-//			filename[i] = serialNumber[serCount];
-//			serCount++;
-//		}
-//	}
+
 	// Next change the counter on the end of the filename
 	// (digits 14+15) to increment count for files generated on
 	// the same day. This shouldn't come into play
@@ -956,24 +1029,7 @@ void initFileName(DateTime time1) {
 		} // end of if(!sd.exists())
 	} // end of file-naming for loop
 	//------------------------------------------------------------
-	// Write 1st header line to SD file based on mission info
-//	if (serialValid) {
-//		logfile.print(serialNumber);
-//	} else {
-//		logfile.print(F("No serial"));
-//	}
-//	// Write the contents of mcusr register to help with troubleshooting
-//	logfile.print(F(",MCUSR:, "));
-//	// Cycle through the contents of mcusr and print
-//	// to the header as 1's and 0's
-//	for(byte mask = 0x80; mask; mask >>= 1){
-//		if(mask  & mcusr) {
-//			logfile.print('1');
-//		} else {
-//			logfile.print('0');
-//		}
-//	}
-//  logfile.println(); // Move to 2nd line
+  // Write 1st header line
   logfile.println(F("POSIXt,DateTime,TC0,TC1,TC2,TC3,TC4,TC5,TC6,TC7"));
 	// Update the file's creation date, modify date, and access date.
 	logfile.timestamp(T_CREATE, time1.year(), time1.month(), time1.day(), 
@@ -990,7 +1046,7 @@ void initFileName(DateTime time1) {
 // initCalibFile - a function to create a filename for the SD card based
 // The character array 'filenameCalib' was defined as a global array 
 // at the top of the sketch in the form: 
-// filenameCalib[] = "CAL0_YYYYMMDD_HHMM_00_SN00.csv";
+// filenameCalib[] = "CAL0_YYYYMMDD_HHMM_00.csv";
 void initCalibFile(DateTime time1) {
 	if (pressCount == 1) {
 		filenameCalib[3] = '1';
@@ -1216,9 +1272,8 @@ DateTime startTIMER2(DateTime currTime){
 }
 
 
-//----------------------------------------------------------------------
+//------------------printTimeSerial------------------------------------------
 void printTimeSerial(DateTime now){
-//------------------------------------------------
 // printTime function takes a DateTime object from
 // the real time clock and prints the date and time 
 // to the serial monitor. 
@@ -1254,7 +1309,7 @@ void printTimeSerial(DateTime now){
 }
 
 
-//-----------------------------------------------------------------------------
+//--------------------goToSleep--------------------------------------------------
 // goToSleep function. When called, this puts the AVR to
 // sleep until it is awakened by an interrupt (TIMER2 in this case)
 // This is a higher power sleep mode than the lowPowerSleep function uses.
@@ -1298,7 +1353,7 @@ void goToSleep() {
 }
 
 
-//--------------------------------------------------------------
+//---------------printTimeToSD----------------------------------------
 // printTimeToSD function. This formats the available data in the
 // data arrays and writes them to the SD card file in a
 // comma-separated value format.
