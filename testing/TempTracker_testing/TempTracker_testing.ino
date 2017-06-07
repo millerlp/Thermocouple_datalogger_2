@@ -1,6 +1,10 @@
 /* TempTracker_testing.ino
 	Copyright Luke Miller 2017
 
+  TODO: implement error handling on RTC and SD card, to allow usage without
+  full functionality
+  TODO: Implement screen power down and button to wake screens
+  
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -42,6 +46,10 @@
 #include "RTClib.h" // https://github.com/millerlp/RTClib
 #include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
 #include "TClib2.h" // My utility library for this project
+<<<<<<< HEAD
+=======
+//#include <math.h>
+>>>>>>> tempArrayMod
 // Various additional libraries for access to sleep mode functions
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -50,8 +58,13 @@
 #include <avr/wdt.h>
 //******************************
 // Data collection rate, enter a value here of 4, 2, or 1 (samples per second)
-#define SAMPLES_PER_SECOND 1 // number of samples taken per second (4, 2, or 1)
+#define SAMPLES_PER_SECOND 2 // number of samples taken per second (4, 2, or 1)
 //******************************
+// Define the number of samples per sensor to average (moving average window)
+#define AVG_WINDOW 4  // Just a number, no units
+// Define the interval (seconds) between saved values (writing to SD card)
+#define SAVE_INTERVAL 5 // units of seconds
+
 
 #define ERRLED A2		// Red error LED pin
 #define GREENLED A3		// Green LED pin
@@ -65,12 +78,6 @@
 // Interval to flash green LED during normal data collection
 // For every 10 seconds, enter 10, for every 30 seconds, enter 30
 #define PULSE_INTERVAL 10
-
-// 0X3C+SA0 - 0x3C or 0x3D for OLED screen on I2C bus
-#define I2C_ADDRESS1 0x3C
-#define I2C_ADDRESS2 0x3D
-SSD1306AsciiWire oled1; // create OLED display object
-SSD1306AsciiWire oled2; // create OLED display object
 
 
 // ***** TYPE DEFINITIONS *****
@@ -99,6 +106,14 @@ mainState_t mainState;
 // debounce state machine variable, this takes on the various
 // values defined for the DEBOUNCE_STATE typedef above.
 volatile debounceState_t debounceState;
+
+//******************************************
+// 0X3C+SA0 - 0x3C or 0x3D for OLED screen on I2C bus
+#define I2C_ADDRESS1 0x3C
+#define I2C_ADDRESS2 0x3D
+
+SSD1306AsciiWire oled1; // create OLED display object, using I2C Wire
+SSD1306AsciiWire oled2; // create OLED display object, using I2C Wire
 
 //*************
 // Create real time clock object
@@ -142,20 +157,25 @@ double temp7 = 0; // hold output from MAX31855 #7
 
 
 // Declare data arrays
-uint32_t unixtimeArray[SAMPLES_PER_SECOND]; // store unixtime values temporarily
-//byte fracSecArray[SAMPLES_PER_SECOND]; // store fracSec values temporarily
-double tempArray[SAMPLES_PER_SECOND][8]; // store temperature values 128bytes
-//int accelcompass1Array[SAMPLES_PER_SECOND][6]; // store accel/compass1 values
-//int accelcompass2Array[SAMPLES_PER_SECOND][6]; // store accel/compass2 values
+double tempArray[AVG_WINDOW][8]; // store temperature values 128bytes
+double tempAverages[8]; // store average of each sensor's last few readings
+double prevAverages[8]; // store previous round of sensor readings
 
 // Declare initial name for output files written to SD card
 char filename[] = "YYYYMMDD_HHMM_00.csv";
 
+<<<<<<< HEAD
 byte loopCount = 0; // counter to keep track of data sampling loops
 byte fracSec = 0; // counter to keep track of fractional seconds
 DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 
+=======
+volatile byte loopCount = 0; // counter to keep track of data sampling loops
+DateTime newtime; // used to track time in main loop
+DateTime oldtime; // used to track time in main loop
+byte SPS = SAMPLES_PER_SECOND; 
+>>>>>>> tempArrayMod
 DateTime buttonTime; // hold the time since the button was pressed
 DateTime chooseTime; // hold the time stamp when a waiting period starts
 DateTime calibEnterTime; // hold the time stamp when calibration mode is entered
@@ -169,16 +189,20 @@ byte longPressTime = 5; // seconds to hold button1 to register a long press
 byte pressCount = 0; // counter for number of button presses
 unsigned long prevMillis;	// counter for faster operations
 unsigned long newMillis;	// counter for faster operations
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> tempArrayMod
 
 bool saveData = false; // Flag to tell whether to carry out write operation on SD card
 bool oledScreenOn = true; // Flag to tell whether screens should be on/off
+bool writeFlag = false; // Flag to signal time to write data to SD card
 
 // Define two temperature limits for the thermocouples, values outside
 // this range will trigger the error notification
-float TClowerlimit = 0.0;
-float TCupperlimit = 60.0;
+//float TClowerlimit = 0.0;
+//float TCupperlimit = 60.0;
 
 //---------------- setup loop ------------------------------------------------
 void setup() {
@@ -277,7 +301,6 @@ void setup() {
     oled1.set1X();
     oled1.println(F("RTC ERROR"));
     oled1.println(buf);
-    oled1.println(F("RTC ERROR"));
     oled1.println(F("Continue?"));
 
     rtcErrorFlag = true;
@@ -306,7 +329,6 @@ void setup() {
     oled1.home();
     oled1.println(F("SD ERROR"));
     oled1.println();
-    oled1.println(F("SD ERROR"));
     oled1.println(F("Continue?"));
 
     sdErrorFlag = true;
@@ -346,22 +368,63 @@ void setup() {
           
   }
 
-  // Take 4 temperature measurements to initialize the array
-//  for (int i = 0; i < 4; i++){
-//    tempArray[i][0] = thermocouple0.readCelsius();
-//    tempArray[i][1] = thermocouple1.readCelsius();
-//    tempArray[i][2] = thermocouple2.readCelsius();
-//    tempArray[i][3] = thermocouple3.readCelsius();
-//    tempArray[i][4] = thermocouple4.readCelsius();
-//    tempArray[i][5] = thermocouple5.readCelsius();
-//    tempArray[i][6] = thermocouple6.readCelsius();
-//    tempArray[i][7] = thermocouple7.readCelsius();
-//  }
-	
+//   Take 4 temperature measurements to initialize the array
+  for (byte i = 0; i < AVG_WINDOW; i++){
+    tempArray[i][0] = thermocouple0.readCelsius(); delay(15);
+    tempArray[i][1] = thermocouple1.readCelsius(); delay(15);
+    tempArray[i][2] = thermocouple2.readCelsius(); delay(15);
+    tempArray[i][3] = thermocouple3.readCelsius(); delay(15);
+    tempArray[i][4] = thermocouple4.readCelsius(); delay(15);
+    tempArray[i][5] = thermocouple5.readCelsius(); delay(15);
+    tempArray[i][6] = thermocouple6.readCelsius(); delay(15);
+    tempArray[i][7] = thermocouple7.readCelsius(); delay(15);
+  }
+
+  // Now calculate the average of the 4 readings for each sensor i
+  for (byte i = 0; i<8; i++){
+    double tempsum = 0;
+    for (byte j = 0; j < AVG_WINDOW; j++){
+      // Add up j measurements for sensor i
+      tempsum += tempArray[j][i];
+    }
+    // Calculate average temperature for sensor i
+    tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+  }
+  // Make a copy of the 1st set of averages for use later in main loop
+  for (byte i = 0; i < 8; i++){
+    prevAverages[i] = tempAverages[i];
+  }
+
+  oled1.home();
+  oled1.set2X();
+  oled1.clearToEOL();
+  for (byte i = 0; i < 4; i++){
+    oled1.clearToEOL();
+    oled1.print(F("Ch"));
+    oled1.print(i);
+    oled1.print(F(": "));
+    oled1.print(tempAverages[i]);
+    oled1.println(F("C"));
+  }
+  oled2.home();
+  oled2.set2X();
+  for (byte i = 4; i < 8; i++){
+    oled2.clearToEOL();
+    oled2.print(F("Ch"));
+    oled2.print(i);
+    oled2.print(F(": "));
+    oled2.print(tempAverages[i]);
+    oled2.println(F("C"));
+  } 
+	delay(2000);
 	// Start 32.768kHz clock signal on TIMER2. 
 	// Supply the current time value as the argument, returns 
 	// an updated time
+<<<<<<< HEAD
 	newtime = startTIMER2(rtc.now(), rtc);
+=======
+	newtime = startTIMER2(rtc.now(), rtc, SPS);
+>>>>>>> tempArrayMod
 	
 	oldtime = newtime; // store the current time value
 	
@@ -478,33 +541,16 @@ void loop() {
 	switch (mainState) {
 		//*****************************************************
 		case STATE_DATA:
-			// bitSet(PIND, 4); // toggle on, for monitoring on o-scope
-		
 			// Check to see if the current seconds value
 			// is equal to oldtime.second(). If so, we
-			// are still in the same second. If not,
-			// the fracSec value should be reset to 0
-			// and oldtime updated to equal newtime.
-			if (oldtime.second() != newtime.second()) {
-				fracSec = 0; // reset fracSec
+			// are still in the same second. 
+     if ( abs(newtime.second() - oldtime.second()) >= SAVE_INTERVAL) {
 				oldtime = newtime; // update oldtime
-				loopCount = 0; // reset loopCount				
+        writeFlag = true; // set flag to write data to SD				
+        // This will force a SD card write once per second
 			}
-			
-			// If it is the start of a new minute, flash the 
-			// green led each time through the loop. This is
-			// used to help the user look for error codes that
-			// flash at seconds 1,2,3,4,5, and 6. 
-			if (newtime.second() == 0) {
-				digitalWrite(GREENLED, HIGH);
-				delay(5);
-				digitalWrite(GREENLED, LOW);
-			}
-			
-			// Save current time to unixtimeArray
-			unixtimeArray[loopCount] = newtime.unixtime();
-//			fracSecArray[loopCount] = fracSec;
 
+<<<<<<< HEAD
 			if (fracSec == 0) {
 				// We only read the thermocouples and hall effect sensors
 				// once per second regardless of the main sampling rate,
@@ -518,61 +564,69 @@ void loop() {
         temp5 = thermocouple5.readCelsius();
         temp6 = thermocouple6.readCelsius();
         temp7 = thermocouple7.readCelsius();                   
+=======
+      if (loopCount >= AVG_WINDOW){
+        loopCount = 0; // reset to beging writing at start of array
+      }
 
-			}  // end of if (fracSec == 0)
-		
-			// Now if loopCount is equal to the value in SAMPLES_PER_SECOND
-			// (minus 1 for zero-based counting), then write out the contents
-			// of the sample data arrays to the SD card. This should write data
-			// every second.
-			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
-				// Call the writeToSD function to output the data array contents
-				// to the SD card
-				writeToSD();
+      // Debugging
+      Serial.println();
+      Serial.print(loopCount);
+      Serial.print(F(" "));
+//      printTimeSerial(newtime);
+      
+      // Read each of the sensors
+      tempArray[loopCount][0] = thermocouple0.readCelsius();
+      tempArray[loopCount][1] = thermocouple1.readCelsius();
+      tempArray[loopCount][2] = thermocouple2.readCelsius();
+      tempArray[loopCount][3] = thermocouple3.readCelsius();
+      tempArray[loopCount][4] = thermocouple4.readCelsius();
+      tempArray[loopCount][5] = thermocouple5.readCelsius();
+      tempArray[loopCount][6] = thermocouple6.readCelsius();
+      tempArray[loopCount][7] = thermocouple7.readCelsius();
 
-        // Add if(oledScreenOn) statement here and print current temps
-        // to screens if they are on. 
-        if (oledScreenOn){
-          // Print stuff to screens
-          oled1.home();
-          oled1.set2X();
-          oled1.clearToEOL();
-          oled1.print(F("Ch0: "));
-          oled1.print(temp0);
-          oled1.println(F("C"));
-          oled1.clearToEOL();
-          oled1.print(F("Ch1: "));
-          oled1.print(temp1);
-          oled1.println(F("C"));
-          oled1.clearToEOL();
-          oled1.print(F("Ch2: "));
-          oled1.print(temp2);
-          oled1.println(F("C"));
-          oled1.clearToEOL();
-          oled1.print(F("Ch3: "));
-          oled1.print(temp3);
-          oled1.println(F("C"));
-
-          oled2.home();
-          oled2.set2X();
-          oled2.clearToEOL();
-          oled2.print(F("Ch4: "));
-          oled2.print(temp4);
-          oled2.println(F("C"));
-          oled2.clearToEOL();
-          oled2.print(F("Ch5: "));
-          oled2.print(temp5);
-          oled2.println(F("C"));
-          oled2.clearToEOL();
-          oled2.print(F("Ch6: "));
-          oled2.print(temp6);
-          oled2.println(F("C"));
-          oled2.clearToEOL();
-          oled2.print(F("Ch7: "));
-          oled2.print(temp7);
-          oled2.println(F("C"));
-          
+      // Calculate the average of the 4 readings for each sensor i
+      for (byte i = 0; i < 8; i++){
+        double tempsum = 0;
+        for (byte j = 0; j < AVG_WINDOW; j++){
+          // Add up j measurements for sensor i
+          tempsum = tempsum + tempArray[j][i];
         }
+        // Calculate average temperature for sensor i
+        tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+      }
+>>>>>>> tempArrayMod
+
+      if (writeFlag){
+        // Call the writeToSD function to output the data array contents
+        // to the SD card 
+        writeToSD(newtime);
+        writeFlag = false; // reset to false
+
+#ifdef ECHO_TO_SERIAL
+        // If ECHO_TO_SERIAL is defined at the start of the 
+        // program, then this section will send updates
+        printTimeSerial(oldtime);
+        Serial.print(F(","));
+        for (byte i = 0; i < 8; i++){
+          Serial.print(tempAverages[i]);
+          Serial.print(F(", "));
+        }
+        Serial.println();
+        delay(10);
+#endif          
+      } // end of if(writeFlag)
+      
+			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
+        if (oledScreenOn){
+          // Print stuff to screens. Function in TClib2.h
+          printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
+        } // end of if (oledScreenOn)
+        // Update the old prevAverages with these new tempAverages
+        for (byte i = 0; i < 8; i++){
+          prevAverages[i] = tempAverages[i];
+        }
+<<<<<<< HEAD
 				
 #ifdef ECHO_TO_SERIAL
 				// If ECHO_TO_SERIAL is defined at the start of the 
@@ -590,26 +644,18 @@ void loop() {
 				delay(5);
 
 #endif			
+=======
+>>>>>>> tempArrayMod
       } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))                   
                         
                         
 			// Increment loopCount after writing all the sample data to
 			// the arrays
-			loopCount++; 
+			++loopCount; 
 				
-			// Increment the fractional seconds count
-	#if SAMPLES_PER_SECOND == 4
-			fracSec = fracSec + 25;
-	#endif
 
-	#if SAMPLES_PER_SECOND == 2
-			fracSec = fracSec + 50;
-	#endif
-			// bitSet(PIND, 4); // toggle off, for monitoring on o-scope
-			// delay(1);
-			// bitSet(PIND, 3); // toggle on, for monitoring on o-scope
-			goToSleep(); // function in MusselTrackerlib.h	
-			// bitSet(PIND, 3); // toggle off, for monitoring on o-scope
+			goToSleep(); // function in TClib2.h	
+
 			// After waking, this case should end and the main loop
 			// should start again. 
 			mainState = STATE_DATA;
@@ -876,7 +922,7 @@ void button2Func (void){
 // writeToSD function. This formats the available data in the
 // data arrays and writes them to the SD card file in a
 // comma-separated value format.
-void writeToSD (void) {
+void writeToSD (DateTime timestamp) {
 
 	// Flash the green LED every 30 seconds to show data is being collected
 	if (newtime.second() % PULSE_INTERVAL == 0) {
@@ -890,41 +936,26 @@ void writeToSD (void) {
 			digitalWrite(ERRLED, HIGH); // turn on error LED
 		}
 	}
-
-	// Step through each element of the sample data arrays
-	// and write them to the SD card
-	for (byte i = 0; i < SAMPLES_PER_SECOND; i++) {
-		// Write the unixtime
-		logfile.print(unixtimeArray[i], DEC); // POSIX time value
-		logfile.print(F(","));
-    printTimeToSD(logfile, unixtimeArray[i]); // human-readable 
-		logfile.print(F(","));
-
-		// Print thermocouple 0 value
-		logfile.print(temp0); 
-		logfile.print(F(","));
-		logfile.print(temp1); 
+	// Write the unixtime
+	logfile.print(timestamp.unixtime(), DEC); // POSIX time value
+	logfile.print(F(","));
+  printTimeToSD(logfile, timestamp); // human-readable 
+  // Write the 8 temperature values in a loop
+  for (byte i = 0; i < 8; i++){
     logfile.print(F(","));
-    logfile.print(temp2); 
-    logfile.print(F(","));
-    logfile.print(temp3); 
-    logfile.print(F(","));
-    logfile.print(temp4); 
-    logfile.print(F(","));
-    logfile.print(temp5); 
-    logfile.print(F(","));
-    logfile.print(temp6); 
-    logfile.print(F(","));
-    logfile.print(temp7); 
-    logfile.println();
-	}
+    logfile.print(tempAverages[i]);
+  }
+  logfile.println();
 	// logfile.close(); // force the buffer to empty
-	  DateTime t1 = DateTime(unixtimeArray[0]);
-	  // If the seconds value is 30, update the file modified timestamp
-	  if (t1.second() % 30 == 0){
-	    logfile.timestamp(T_WRITE, t1.year(),t1.month(),t1.day(),t1.hour(),t1.minute(),t1.second());
-	  }
+
+<<<<<<< HEAD
+=======
+  if (timestamp.second() % 30 == 0){
+	    logfile.timestamp(T_WRITE, timestamp.year(),timestamp.month(), \
+	    timestamp.day(),timestamp.hour(),timestamp.minute(),timestamp.second());
+  }
 }
 
 
 
+>>>>>>> tempArrayMod
