@@ -161,18 +161,11 @@ double prevAverages[8]; // store previous round of sensor readings
 // Declare initial name for output files written to SD card
 char filename[] = "YYYYMMDD_HHMM_00.csv";
 
-
-byte loopCount = 0; // counter to keep track of data sampling loops
-byte fracSec = 0; // counter to keep track of fractional seconds
-DateTime newtime; // used to track time in main loop
-DateTime oldtime; // used to track time in main loop
-
-
 byte loopCount = 0; // counter to keep track of data sampling loops
 DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 byte SPS = SAMPLES_PER_SECOND; 
->>>>>>> tempArrayMod
+
 DateTime buttonTime; // hold the time since the button was pressed
 DateTime chooseTime; // hold the time stamp when a waiting period starts
 DateTime calibEnterTime; // hold the time stamp when calibration mode is entered
