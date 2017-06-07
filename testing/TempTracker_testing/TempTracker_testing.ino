@@ -46,10 +46,7 @@
 #include "RTClib.h" // https://github.com/millerlp/RTClib
 #include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
 #include "TClib2.h" // My utility library for this project
-<<<<<<< HEAD
-=======
-//#include <math.h>
->>>>>>> tempArrayMod
+
 // Various additional libraries for access to sleep mode functions
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -164,14 +161,14 @@ double prevAverages[8]; // store previous round of sensor readings
 // Declare initial name for output files written to SD card
 char filename[] = "YYYYMMDD_HHMM_00.csv";
 
-<<<<<<< HEAD
+
 byte loopCount = 0; // counter to keep track of data sampling loops
 byte fracSec = 0; // counter to keep track of fractional seconds
 DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 
-=======
-volatile byte loopCount = 0; // counter to keep track of data sampling loops
+
+byte loopCount = 0; // counter to keep track of data sampling loops
 DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 byte SPS = SAMPLES_PER_SECOND; 
@@ -189,11 +186,7 @@ byte longPressTime = 5; // seconds to hold button1 to register a long press
 byte pressCount = 0; // counter for number of button presses
 unsigned long prevMillis;	// counter for faster operations
 unsigned long newMillis;	// counter for faster operations
-<<<<<<< HEAD
 
-
-=======
->>>>>>> tempArrayMod
 
 bool saveData = false; // Flag to tell whether to carry out write operation on SD card
 bool oledScreenOn = true; // Flag to tell whether screens should be on/off
@@ -420,11 +413,7 @@ void setup() {
 	// Start 32.768kHz clock signal on TIMER2. 
 	// Supply the current time value as the argument, returns 
 	// an updated time
-<<<<<<< HEAD
-	newtime = startTIMER2(rtc.now(), rtc);
-=======
 	newtime = startTIMER2(rtc.now(), rtc, SPS);
->>>>>>> tempArrayMod
 	
 	oldtime = newtime; // store the current time value
 	
@@ -550,21 +539,6 @@ void loop() {
         // This will force a SD card write once per second
 			}
 
-<<<<<<< HEAD
-			if (fracSec == 0) {
-				// We only read the thermocouples and hall effect sensors
-				// once per second regardless of the main sampling rate,
-				// since these won't change fast enough to warrant reading
-				// them (and waking them) more than once per second.
-				temp0 = thermocouple0.readCelsius();
-				temp1 = thermocouple1.readCelsius();
-        temp2 = thermocouple2.readCelsius();
-        temp3 = thermocouple3.readCelsius();
-        temp4 = thermocouple4.readCelsius();
-        temp5 = thermocouple5.readCelsius();
-        temp6 = thermocouple6.readCelsius();
-        temp7 = thermocouple7.readCelsius();                   
-=======
       if (loopCount >= AVG_WINDOW){
         loopCount = 0; // reset to beging writing at start of array
       }
@@ -595,7 +569,7 @@ void loop() {
         // Calculate average temperature for sensor i
         tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
       }
->>>>>>> tempArrayMod
+
 
       if (writeFlag){
         // Call the writeToSD function to output the data array contents
@@ -626,26 +600,6 @@ void loop() {
         for (byte i = 0; i < 8; i++){
           prevAverages[i] = tempAverages[i];
         }
-<<<<<<< HEAD
-				
-#ifdef ECHO_TO_SERIAL
-				// If ECHO_TO_SERIAL is defined at the start of the 
-				// program, then this section will send updates of the
-				// sensor values once per second.
-				printTimeSerial(oldtime);
-//				Serial.print(F(" Temp0: "));
-//				Serial.print(temp0);
-//
-//				Serial.print(F(" Temp1: "));
-//				Serial.print(temp1);
-
-				delay(10);
-				Serial.println();
-				delay(5);
-
-#endif			
-=======
->>>>>>> tempArrayMod
       } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))                   
                         
                         
@@ -948,14 +902,9 @@ void writeToSD (DateTime timestamp) {
   logfile.println();
 	// logfile.close(); // force the buffer to empty
 
-<<<<<<< HEAD
-=======
   if (timestamp.second() % 30 == 0){
 	    logfile.timestamp(T_WRITE, timestamp.year(),timestamp.month(), \
 	    timestamp.day(),timestamp.hour(),timestamp.minute(),timestamp.second());
   }
 }
 
-
-
->>>>>>> tempArrayMod
