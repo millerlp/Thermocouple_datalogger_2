@@ -350,8 +350,7 @@ void setup() {
     oled2.set1X();
     oled2.clearToEOL();
     oled2.print(filename);
-    delay(1000);
-          
+    delay(1000);          
   }
 
 //   Take 4 temperature measurements to initialize the array
@@ -402,11 +401,19 @@ void setup() {
     oled2.print(tempAverages[i]);
     oled2.println(F("C"));
   } 
-	delay(2000);
+
 	// Start 32.768kHz clock signal on TIMER2. 
 	// Supply the current time value as the argument, returns 
 	// an updated time
 	newtime = startTIMER2(rtc.now(), rtc, SPS);
+
+  // Cycle briefly until we reach 9 sec, so that the
+  // data collection loop will start on a nice even 0 sec
+  // time stamp. 
+  while (!( (newtime.second() % 10) == 0)){
+    delay(50);
+    newtime = rtc.now();
+  }
 	
 	oldtime = newtime; // store the current time value
 	
@@ -537,9 +544,9 @@ void loop() {
       }
 
       // Debugging
-      Serial.println();
-      Serial.print(loopCount);
-      Serial.print(F(" "));
+//      Serial.println();
+//      Serial.print(loopCount);
+//      Serial.print(F(" "));
 //      printTimeSerial(newtime);
       
       // Read each of the sensors
@@ -890,7 +897,13 @@ void writeToSD (DateTime timestamp) {
   // Write the 8 temperature values in a loop
   for (byte i = 0; i < 8; i++){
     logfile.print(F(","));
-    logfile.print(tempAverages[i]);
+    if (isnan(tempAverages[i])){
+      // If the value is nan, replace with NA for easier parsing
+      // in R. 
+      logfile.print(F("NA"));
+    } else {
+      logfile.print(tempAverages[i]);
+    }
   }
   logfile.println();
 	// logfile.close(); // force the buffer to empty
