@@ -1,6 +1,10 @@
 /* TempTracker_testing.ino
 	Copyright Luke Miller 2017
 
+  TODO: implement error handling on RTC and SD card, to allow usage without
+  full functionality
+  TODO: Implement screen power down and button to wake screens
+  
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -579,35 +583,8 @@ void loop() {
       
 			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
         if (oledScreenOn){
+          // Print stuff to screens. Function in TClib2.h
           printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
-          // Print stuff to screens
-//          oled1.home();
-//          oled1.set2X();
-////          oled1.clearToEOL();
-//          for (byte j = 0; j < 4; j++){
-//            // Check to see if the value has changed and
-//            // only update if it's changed
-//            if (tempAverages[j] != prevAverages[j]){
-//              oled1.clear(60,128,oled1.row(),(oled1.row()+1));
-//              oled1.print(tempAverages[j]);
-//              oled1.println(F("C"));
-//            } else {
-//              // Skip to next row. At 2x size, each row is 2units tall
-//              oled1.setRow(oled1.row()+2);
-//            }
-//          }
-//          oled2.home();
-//          oled2.set2X();
-//          for (byte j = 4; j < 8; j++){
-//            if (tempAverages[j] != prevAverages[j]){
-//              oled2.clear(60,128,oled2.row(),(oled2.row()+1));
-//              oled2.print(tempAverages[j]);
-//              oled2.println(F("C"));
-//            } else {
-//              // Skip to next row. At 2x size, each row is 2units tall
-//              oled2.setRow(oled2.row()+2);
-//            }
-//          } 
         } // end of if (oledScreenOn)
         // Update the old prevAverages with these new tempAverages
         for (byte i = 0; i < 8; i++){
@@ -621,7 +598,7 @@ void loop() {
 			++loopCount; 
 				
 
-			goToSleep(); // function in MusselTrackerlib.h	
+			goToSleep(); // function in TClib2.h	
 
 			// After waking, this case should end and the main loop
 			// should start again. 
