@@ -42,6 +42,7 @@
 #include "RTClib.h" // https://github.com/millerlp/RTClib
 #include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
 #include "TClib2.h" // My utility library for this project
+#include <math.h>
 // Various additional libraries for access to sleep mode functions
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -74,8 +75,8 @@
 // 0X3C+SA0 - 0x3C or 0x3D for OLED screen on I2C bus
 #define I2C_ADDRESS1 0x3C
 #define I2C_ADDRESS2 0x3D
-SSD1306AsciiWire oled1; // create OLED display object
-SSD1306AsciiWire oled2; // create OLED display object
+SSD1306AsciiWire oled1; // create OLED display object, using I2C Wire
+SSD1306AsciiWire oled2; // create OLED display object, using I2C Wire
 
 
 // ***** TYPE DEFINITIONS *****
@@ -149,6 +150,7 @@ double temp7 = 0; // hold output from MAX31855 #7
 // Declare data arrays
 double tempArray[AVG_WINDOW][8]; // store temperature values 128bytes
 double tempAverages[8]; // store average of each sensor's last few readings
+double prevAverages[8]; // store previous round of sensor readings
 
 // Declare initial name for output files written to SD card
 char filename[] = "YYYYMMDD_HHMM_00.csv";
@@ -368,6 +370,10 @@ void setup() {
     // Calculate average temperature for sensor i
     tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
   }
+  // Make a copy of the 1st set of averages for use later in main loop
+  for (byte i = 0; i < 8; i++){
+    prevAverages[i] = tempAverages[i];
+  }
 
   oled1.home();
   oled1.set2X();
@@ -511,13 +517,10 @@ void loop() {
 	switch (mainState) {
 		//*****************************************************
 		case STATE_DATA:
-			// bitSet(PIND, 4); // toggle on, for monitoring on o-scope
-		
 			// Check to see if the current seconds value
 			// is equal to oldtime.second(). If so, we
 			// are still in the same second. 
      if ( abs(newtime.second() - oldtime.second()) >= SAVE_INTERVAL) {
-//			if (oldtime.second() != newtime.second()) {
 				oldtime = newtime; // update oldtime
         writeFlag = true; // set flag to write data to SD				
         // This will force a SD card write once per second
@@ -526,18 +529,8 @@ void loop() {
       if (loopCount >= AVG_WINDOW){
         loopCount = 0; // reset to beging writing at start of array
       }
-      
-			// If it is the start of a new minute, flash the 
-			// green led each time through the loop. This is
-			// used to help the user look for error codes that
-			// flash at seconds 1,2,3,4,5, and 6. 
-			if (newtime.second() == 0) {
-				digitalWrite(GREENLED, HIGH);
-				delay(5);
-				digitalWrite(GREENLED, LOW);
-			}
 
-//      Serial.print(F("Reading "));
+      // Debugging
       Serial.println();
       Serial.print(loopCount);
       Serial.print(F(" "));
@@ -553,27 +546,26 @@ void loop() {
       tempArray[loopCount][6] = thermocouple6.readCelsius();
       tempArray[loopCount][7] = thermocouple7.readCelsius();
 
+      // Calculate the average of the 4 readings for each sensor i
+      for (byte i = 0; i < 8; i++){
+        double tempsum = 0;
+        for (byte j = 0; j < AVG_WINDOW; j++){
+          // Add up j measurements for sensor i
+          tempsum = tempsum + tempArray[j][i];
+        }
+        // Calculate average temperature for sensor i
+        tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+      }
 
       if (writeFlag){
-        // Calculate the average of the 4 readings for each sensor i
-        for (byte i = 0; i < 8; i++){
-          double tempsum = 0;
-          for (byte j = 0; j < AVG_WINDOW; j++){
-            // Add up j measurements for sensor i
-            tempsum = tempsum + tempArray[j][i];
-          }
-          // Calculate average temperature for sensor i
-          tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
-        }
-
         // Call the writeToSD function to output the data array contents
         // to the SD card 
         writeToSD(newtime);
         writeFlag = false; // reset to false
+
 #ifdef ECHO_TO_SERIAL
         // If ECHO_TO_SERIAL is defined at the start of the 
-        // program, then this section will send updates of the
-        // sensor values once per second.
+        // program, then this section will send updates
         printTimeSerial(oldtime);
         Serial.print(F(","));
         for (byte i = 0; i < 8; i++){
@@ -581,53 +573,55 @@ void loop() {
           Serial.print(F(", "));
         }
         Serial.println();
-
-//        delay(10);
-//        Serial.println();
         delay(10);
-
 #endif          
       } // end of if(writeFlag)
       
-//			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
-//        if (oledScreenOn){
-//          // Print stuff to screens
-//          oled1.home();
-//          oled1.set2X();
+			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
+        if (oledScreenOn){
+          // Print stuff to screens
+          oled1.home();
+          oled1.set2X();
 //          oled1.clearToEOL();
-//          for (byte i = 0; i < 4; i++){
-//            oled1.clearToEOL();
-//            oled1.print(F("Ch"));
-//            oled1.print(i);
-//            oled1.print(F(": "));
-//            oled1.print(tempAverages[i]);
-//            oled1.println(F("C"));
-//          }
-//          oled2.home();
-//          oled2.set2X();
-//          for (byte i = 4; i < 8; i++){
-//            oled2.clearToEOL();
-//            oled2.print(F("Ch"));
-//            oled2.print(i);
-//            oled2.print(F(": "));
-//            oled2.print(tempAverages[i]);
-//            oled2.println(F("C"));
-//          } 
-//        } // end of if (oledScreenOn)
-//      } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))                   
+          for (byte j = 0; j < 4; j++){
+            // Check to see if the value has changed and
+            // only update if it's changed
+            if (tempAverages[j] != prevAverages[j]){
+              oled1.clear(60,128,oled1.row(),(oled1.row()+1));
+              oled1.print(tempAverages[j]);
+              oled1.println(F("C"));
+            } else {
+              // Skip to next row. At 2x size, each row is 2units tall
+              oled1.setRow(oled1.row()+2);
+            }
+          }
+          oled2.home();
+          oled2.set2X();
+          for (byte j = 4; j < 8; j++){
+            if (tempAverages[j] != prevAverages[j]){
+              oled2.clear(60,128,oled2.row(),(oled2.row()+1));
+              oled2.print(tempAverages[j]);
+              oled2.println(F("C"));
+            } else {
+              // Skip to next row. At 2x size, each row is 2units tall
+              oled2.setRow(oled2.row()+2);
+            }
+          } 
+        } // end of if (oledScreenOn)
+        // Update the old prevAverages with these new tempAverages
+        for (byte i = 0; i < 8; i++){
+          prevAverages[i] = tempAverages[i];
+        }
+      } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))                   
                         
                         
 			// Increment loopCount after writing all the sample data to
 			// the arrays
 			++loopCount; 
-//      Serial.println(loopCount);
-//      delay(10);
 				
-			// bitSet(PIND, 4); // toggle off, for monitoring on o-scope
-			// delay(1);
-			// bitSet(PIND, 3); // toggle on, for monitoring on o-scope
+
 			goToSleep(); // function in MusselTrackerlib.h	
-			// bitSet(PIND, 3); // toggle off, for monitoring on o-scope
+
 			// After waking, this case should end and the main loop
 			// should start again. 
 			mainState = STATE_DATA;
