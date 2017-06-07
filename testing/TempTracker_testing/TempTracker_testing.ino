@@ -42,7 +42,7 @@
 #include "RTClib.h" // https://github.com/millerlp/RTClib
 #include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
 #include "TClib2.h" // My utility library for this project
-#include <math.h>
+//#include <math.h>
 // Various additional libraries for access to sleep mode functions
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -54,7 +54,7 @@
 #define SAMPLES_PER_SECOND 2 // number of samples taken per second (4, 2, or 1)
 //******************************
 // Define the number of samples per sensor to average (moving average window)
-#define AVG_WINDOW 4
+#define AVG_WINDOW 4  // Just a number, no units
 // Define the interval (seconds) between saved values (writing to SD card)
 #define SAVE_INTERVAL 5 // units of seconds
 
@@ -71,12 +71,6 @@
 // Interval to flash green LED during normal data collection
 // For every 10 seconds, enter 10, for every 30 seconds, enter 30
 #define PULSE_INTERVAL 10
-
-// 0X3C+SA0 - 0x3C or 0x3D for OLED screen on I2C bus
-#define I2C_ADDRESS1 0x3C
-#define I2C_ADDRESS2 0x3D
-SSD1306AsciiWire oled1; // create OLED display object, using I2C Wire
-SSD1306AsciiWire oled2; // create OLED display object, using I2C Wire
 
 
 // ***** TYPE DEFINITIONS *****
@@ -105,6 +99,14 @@ mainState_t mainState;
 // debounce state machine variable, this takes on the various
 // values defined for the DEBOUNCE_STATE typedef above.
 volatile debounceState_t debounceState;
+
+//******************************************
+// 0X3C+SA0 - 0x3C or 0x3D for OLED screen on I2C bus
+#define I2C_ADDRESS1 0x3C
+#define I2C_ADDRESS2 0x3D
+
+SSD1306AsciiWire oled1; // create OLED display object, using I2C Wire
+SSD1306AsciiWire oled2; // create OLED display object, using I2C Wire
 
 //*************
 // Create real time clock object
@@ -279,7 +281,6 @@ void setup() {
     oled1.set1X();
     oled1.println(F("RTC ERROR"));
     oled1.println(buf);
-    oled1.println(F("RTC ERROR"));
     oled1.println(F("Continue?"));
 
     rtcErrorFlag = true;
@@ -308,7 +309,6 @@ void setup() {
     oled1.home();
     oled1.println(F("SD ERROR"));
     oled1.println();
-    oled1.println(F("SD ERROR"));
     oled1.println(F("Continue?"));
 
     sdErrorFlag = true;
@@ -579,34 +579,35 @@ void loop() {
       
 			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
         if (oledScreenOn){
+          printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
           // Print stuff to screens
-          oled1.home();
-          oled1.set2X();
-//          oled1.clearToEOL();
-          for (byte j = 0; j < 4; j++){
-            // Check to see if the value has changed and
-            // only update if it's changed
-            if (tempAverages[j] != prevAverages[j]){
-              oled1.clear(60,128,oled1.row(),(oled1.row()+1));
-              oled1.print(tempAverages[j]);
-              oled1.println(F("C"));
-            } else {
-              // Skip to next row. At 2x size, each row is 2units tall
-              oled1.setRow(oled1.row()+2);
-            }
-          }
-          oled2.home();
-          oled2.set2X();
-          for (byte j = 4; j < 8; j++){
-            if (tempAverages[j] != prevAverages[j]){
-              oled2.clear(60,128,oled2.row(),(oled2.row()+1));
-              oled2.print(tempAverages[j]);
-              oled2.println(F("C"));
-            } else {
-              // Skip to next row. At 2x size, each row is 2units tall
-              oled2.setRow(oled2.row()+2);
-            }
-          } 
+//          oled1.home();
+//          oled1.set2X();
+////          oled1.clearToEOL();
+//          for (byte j = 0; j < 4; j++){
+//            // Check to see if the value has changed and
+//            // only update if it's changed
+//            if (tempAverages[j] != prevAverages[j]){
+//              oled1.clear(60,128,oled1.row(),(oled1.row()+1));
+//              oled1.print(tempAverages[j]);
+//              oled1.println(F("C"));
+//            } else {
+//              // Skip to next row. At 2x size, each row is 2units tall
+//              oled1.setRow(oled1.row()+2);
+//            }
+//          }
+//          oled2.home();
+//          oled2.set2X();
+//          for (byte j = 4; j < 8; j++){
+//            if (tempAverages[j] != prevAverages[j]){
+//              oled2.clear(60,128,oled2.row(),(oled2.row()+1));
+//              oled2.print(tempAverages[j]);
+//              oled2.println(F("C"));
+//            } else {
+//              // Skip to next row. At 2x size, each row is 2units tall
+//              oled2.setRow(oled2.row()+2);
+//            }
+//          } 
         } // end of if (oledScreenOn)
         // Update the old prevAverages with these new tempAverages
         for (byte i = 0; i < 8; i++){
