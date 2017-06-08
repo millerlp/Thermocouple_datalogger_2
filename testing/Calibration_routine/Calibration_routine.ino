@@ -30,7 +30,7 @@
 #define BUTTON1 2     // BUTTON1 on INT0, pin PD2
 #define BUTTON2 3     // BUTTON2 on INT1, pin PD3
 //*********************
-#define SAMPLES 30    // number of samples per temperature
+#define SAMPLES 5    // number of samples per temperature
 //*********************
 // Create real time clock object
 RTC_DS3231 rtc;
@@ -63,7 +63,10 @@ Adafruit_MAX31855 thermocouple6(CS_MAX6);
 Adafruit_MAX31855 thermocouple7(CS_MAX7);
 double temp[SAMPLES]; // temperature array
 
-
+// Define the set of simulated temperatures that will be provided
+// by the thermocouple calibrator
+byte testTemps[] = {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50};
+byte tempCounter = 0;
 
 // Declare initial name for output files written to SD card
 char calibFilename[] = "YYYYMMDD_HHMM_00_ChX_calib.csv";
@@ -113,7 +116,7 @@ void setup() {
   } 
   Serial.begin(57600);
   Serial.println(F("Hello")); 
-  Serial.println(F("Make sure your terminal is set to No line ending"));
+//  Serial.println(F("Make sure your terminal is set to No line ending"));
 
 // Initialize the real time clock DS3231M
   Wire.begin(); // Start the I2C library with default options
@@ -154,7 +157,7 @@ void setup() {
     Serial.println("Please enter a channel to calibrate (0 to 7):");
     while (!Serial.available());
       if (Serial.available() > 0) {
-          // Convert input ascii character to a numeric value (0 to 7)
+          // Convert 1st input ascii character to a numeric value (0 to 7)
           Channel = Serial.parseInt();;
           if ( (Channel >= 0) | (Channel <= 7) ){
             Serial.print("Channel ");
@@ -162,6 +165,11 @@ void setup() {
             channelSelectFlag = true; // kills while loop
           } else {
             Serial.println("Whoops, please enter value 0 to 7.");
+          }
+          // Empty the serial buffer
+          while (Serial.available() > 0 ){
+            char junk = Serial.read();
+            delay(5);
           }
       } // end of if (Serial.available() > 0) {
   } // end of while (channelSelectFlag == false)
@@ -178,17 +186,27 @@ void setup() {
 
 //************************************************
 void loop() {
-
-  while (continueCalib){
-    Serial.println(F("Please enter known temperature C: "));
-    while  (!Serial.available()); // wait for user response
+  
+  while (continueCalib & (tempCounter < (sizeof(testTemps)/sizeof(byte)))){
+    Serial.print(F("Set calibrator to "));
+    Serial.print(testTemps[tempCounter]);
+    Serial.println(F(" C, and hit enter to start"));
+    
+    while  (Serial.available()<=0) {}; // wait for user response
     if (Serial.available() > 0){
-      targetTemp = Serial.parseFloat(); // read a floating point value
+      // Empty the serial buffer
+      while (Serial.available() > 0 ){
+        char junk = Serial.read();
+        Serial.println(junk);
+        delay(5);
+      }
+      // Get next test temperature
+      targetTemp = testTemps[tempCounter];
       Serial.print(F("Target temperature: \t"));
       Serial.print(targetTemp);
       Serial.println(F(" C"));
     }
-    // Now read appropriate channel and write data to sd card calibFile
+    // Now read appropriate channel
     switch(Channel){
       case 0:
         for (int i = 0; i < SAMPLES; i++){
@@ -265,31 +283,36 @@ void loop() {
     }
     // Write temp array to SD card
     writeCalibSD(targetTemp,temp);
+    // Increment tempCounter
+    ++tempCounter;
 
-    while (Serial.read() >= 0) {};
-    // Finished taking data, ask user to continue or quit
-    Serial.println(F("Continue or quit? y or q: "));
-    while (!Serial.available()) ; // wait for response
-    if (Serial.available() > 0 ) {
-        choice = Serial.read();
-       if (choice == 'y'){
-          continueCalib = true;
-       } else if (choice == 'q') {
-          continueCalib = false; // kill this inner loop
-       }
-    }
-    while (Serial.read() >= 0) {}; // flush out buffer
+//    while (Serial.read() >= 0) {};
+//    // Finished taking data, ask user to continue or quit
+//    Serial.println(F("Continue or quit? y or q: "));
+//    while (!Serial.available()) ; // wait for response
+//    if (Serial.available() > 0 ) {
+//        choice = Serial.read();
+//       if (choice == 'y'){
+//          continueCalib = true;
+//       } else if (choice == 'q') {
+//          continueCalib = false; // kill this inner loop
+//       }
+//    }
+//    while (Serial.read() >= 0) {}; // flush out buffer
     
   } // end of while (continueCalib)
+    // The while loop above should end when the last
+    // temperature has been run, so finish by closing 
+    // the SD card file. 
 
-  if (!continueCalib){
+//  if (!continueCalib){
     // Clean up and go into suspension
     calibfile.close();
     Serial.print(F("Saved file: "));
     Serial.println(calibFilename);
     Serial.println(F("Reset to calibrate again"));
     while(1); // infinite loop  
-  }
+//  }
   
 
 } // end of main loop()
