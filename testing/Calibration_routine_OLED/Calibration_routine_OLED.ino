@@ -137,8 +137,6 @@ void setup() {
   char *timebuf = buf + 10;
   printTimeSerial(rtc.now()); // print time to serial monitor
   Serial.println();
-  
-  delay(1000); 
 
   //----------------------------------
   // Start up the oled displays
@@ -152,13 +150,14 @@ void setup() {
   oled2.set400kHz();  
   oled2.setFont(Adafruit5x7);    
   oled2.clear();
-  oled2.print(F("There"));
   //----------------------------------
+  // Display Date on OLED1
   oled1.println();
   oled1.set2X();
   for (int i = 0; i<11; i++){
     oled1.print(buf[i]);
   }
+  // Display Time on OLED2
   oled2.println();
   oled2.set2X();
   oled2.println(timebuf);
@@ -183,6 +182,9 @@ void setup() {
                         digitalWrite(GREENLED, HIGH);
                         delay(100);
                         digitalWrite(GREENLED, LOW);
+                        oled1.println();
+                        oled1.print(F("SD CARD"));
+                        oled2.print(F("ERROR"));
     }
   }
   
@@ -245,26 +247,6 @@ void setup() {
   oled2.println(F("0C"));
   delay(2000);
   
-//  while (channelSelectFlag == false){
-//    Serial.println("Please enter a channel to calibrate (0 to 7):");
-//    while (!Serial.available());
-//      if (Serial.available() > 0) {
-//          // Convert 1st input ascii character to a numeric value (0 to 7)
-//          Channel = Serial.parseInt();;
-//          if ( (Channel >= 0) | (Channel <= 7) ){
-//            Serial.print("Channel ");
-//            Serial.println(Channel);
-//            channelSelectFlag = true; // kills while loop
-//          } else {
-//            Serial.println("Whoops, please enter value 0 to 7.");
-//          }
-//          // Empty the serial buffer
-//          while (Serial.available() > 0 ){
-//            char junk = Serial.read();
-//            delay(5);
-//          }
-//      } // end of if (Serial.available() > 0) {
-//  } // end of while (channelSelectFlag == false)
 
   // Initialize a new output file
   newtime = rtc.now();
@@ -278,26 +260,78 @@ void setup() {
 
 //************************************************
 void loop() {
-  
+  // Loop through each of the calibration temperatures stored in testTemps
+  // Initially the routine will pause and wait for the user to hit 
+  // Button1 before storing a set of measurements. The while loop will cycle
+  // until the continueCalib flag is set false. 
   while (continueCalib & (tempCounter < (sizeof(testTemps)/sizeof(byte)))){
       oled1.home();
       oled1.clear();
       oled1.set2X();
       oled1.println(F("Set calib"));
-      oled1.println(F("temp to"));
+      oled1.print(F("temp to "));
       oled1.print(testTemps[tempCounter]);
-      oled1.println(F(" C"));
+      oled1.println(F("C"));
+      oled1.println(); // add empty line
+      oled1.print(F("Ch"));
+      oled1.print(Channel);
+      oled1.print(F(" "));
+      
+      // Switch to screen 2
       oled2.home();
       oled2.clear();
       oled2.set2X();
       oled2.println(F("Press"));
       oled2.println(F("BUTTON1"));
-      oled2.print(F("to start"));
+      oled2.println(F("to start"));
+      oled2.set1X();
+      oled2.setCursor(0,9);
+      oled2.print(F("Internal temp: "));
 
       delay(200);      
-      // wait for start signal
+      
       bool buttonFlag = false;
+      float currTemp = 0;
+      float internalTemp = 0;
+      unsigned long oldMillis = millis();
+      // Wait for start signal
       while (!buttonFlag){
+            // Take a reading to show on the screen
+            switch(Channel){
+              case 0:
+                currTemp = thermocouple0.readCelsius();
+                internalTemp = thermocouple0.readInternal();
+              break;
+              case 1:
+                currTemp = thermocouple1.readCelsius();
+                internalTemp = thermocouple1.readInternal();
+              break;
+              case 2:
+                currTemp = thermocouple2.readCelsius();
+                internalTemp = thermocouple2.readInternal();
+              break;
+              case 3:
+                currTemp = thermocouple3.readCelsius();
+                internalTemp = thermocouple3.readInternal();
+              break;
+              case 4:
+                currTemp = thermocouple4.readCelsius();
+                internalTemp = thermocouple4.readInternal();
+              break;
+              case 5:
+                currTemp = thermocouple5.readCelsius();
+                internalTemp = thermocouple5.readInternal();
+              break;
+              case 6:
+                currTemp = thermocouple6.readCelsius();
+                internalTemp = thermocouple6.readInternal();
+              break;            
+              case 7:
+                currTemp = thermocouple7.readCelsius();
+                internalTemp = thermocouple7.readInternal();
+              break;
+            }
+        // Check the button
         if(digitalRead(BUTTON1) == LOW){
           // Button is pressed
           delay(debounceTime);
@@ -308,7 +342,23 @@ void loop() {
             buttonFlag = true;
           }
         } else {
-          digitalWrite(GREENLED, !digitalRead(GREENLED)); // Flash to notify user
+          // Button is not pressed, update OLED screens
+          // every 500 ms. 
+          if ( (millis() - oldMillis) > 500){
+            oldMillis = millis(); // update oldMillis
+            oled1.set2X();
+            oled1.clear(48,128,6,7);
+            oled1.print(currTemp);
+            oled1.print(F(" C"));
+
+            oled2.set1X();
+            oled2.setCursor(0,7);
+            oled2.clearToEOL();
+            oled2.print(internalTemp,4);
+            oled2.print(F(" C"));
+            oled2.set2X();
+          }
+//          digitalWrite(GREENLED, !digitalRead(GREENLED)); // Flash to notify user
           delay(50);
         }
     } // end of while (!buttonFlag)
