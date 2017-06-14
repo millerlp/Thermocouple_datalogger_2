@@ -291,12 +291,28 @@ void loop() {
       delay(200);      
       
       bool buttonFlag = false;
-      float currTemp = 0;
-      float internalTemp = 0;
+      double currTemp = 0;
+      double internalTemp = 0;
       unsigned long oldMillis = millis();
       // Wait for start signal
       while (!buttonFlag){
-            // Take a reading to show on the screen
+           
+        // Check the button
+        if(digitalRead(BUTTON1) == LOW){
+          // Button is pressed
+          delay(debounceTime);
+          if (digitalRead(BUTTON1) == LOW){
+            // If button is still pressed, now wait for a high signal
+            while (digitalRead(BUTTON1) == LOW){delay(debounceTime);};
+            // Now that button in released, set buttonFlag true to kill loop
+            buttonFlag = true;
+          }
+        } else {
+          // Button is not pressed, update OLED screens
+          // every 500 ms. 
+          if ( (millis() - oldMillis) > 500){
+            oldMillis = millis(); // update oldMillis
+             // Take a reading to show on the screen
             switch(Channel){
               case 0:
                 currTemp = thermocouple0.readCelsius();
@@ -331,24 +347,14 @@ void loop() {
                 internalTemp = thermocouple7.readInternal();
               break;
             }
-        // Check the button
-        if(digitalRead(BUTTON1) == LOW){
-          // Button is pressed
-          delay(debounceTime);
-          if (digitalRead(BUTTON1) == LOW){
-            // If button is still pressed, now wait for a high signal
-            while (digitalRead(BUTTON1) == LOW){delay(debounceTime);};
-            // Now that button in released, set buttonFlag true to kill loop
-            buttonFlag = true;
-          }
-        } else {
-          // Button is not pressed, update OLED screens
-          // every 500 ms. 
-          if ( (millis() - oldMillis) > 500){
-            oldMillis = millis(); // update oldMillis
+            // Apply the temperature correction. Function is in 
+            // the library TClib2
+            double correctedTemp = correctTemp(currTemp, internalTemp);
+            
+            // Update the screen
             oled1.set2X();
             oled1.clear(48,128,6,7);
-            oled1.print(currTemp);
+            oled1.print(correctedTemp);
             oled1.print(F(" C"));
 
             oled2.set1X();
@@ -382,7 +388,7 @@ void loop() {
     switch(Channel){
       case 0:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple0.readCelsius();
+          temp[i] = correctTemp(thermocouple0.readCelsius(),thermocouple0.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);
@@ -394,7 +400,7 @@ void loop() {
       break;
       case 1:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple1.readCelsius();
+          temp[i] = correctTemp(thermocouple1.readCelsius(),thermocouple1.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);
@@ -406,7 +412,7 @@ void loop() {
       break;
       case 2:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple2.readCelsius();
+          temp[i] = correctTemp(thermocouple2.readCelsius(),thermocouple2.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -418,7 +424,7 @@ void loop() {
       break; 
       case 3:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple3.readCelsius();
+          temp[i] = correctTemp(thermocouple3.readCelsius(),thermocouple3.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -430,7 +436,7 @@ void loop() {
       break;
       case 4:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple4.readCelsius();
+          temp[i] = correctTemp(thermocouple4.readCelsius(),thermocouple4.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -442,7 +448,7 @@ void loop() {
       break;
       case 5:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple5.readCelsius();
+          temp[i] = correctTemp(thermocouple5.readCelsius(),thermocouple5.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -454,7 +460,7 @@ void loop() {
       break;
       case 6:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple6.readCelsius();
+          temp[i] = correctTemp(thermocouple6.readCelsius(),thermocouple6.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -466,7 +472,7 @@ void loop() {
       break;
       case 7:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = thermocouple7.readCelsius();
+          temp[i] = correctTemp(thermocouple7.readCelsius(),thermocouple7.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -528,7 +534,7 @@ void writeCalibSD (float targetTemp, double *temp){
   for (int i = 0; i < SAMPLES; i++){
     calibfile.print(targetTemp); // repeat this for each entry
     calibfile.print(F(","));
-    calibfile.print(temp[i]);     
+    calibfile.print(temp[i],3);  // write 3 sig figs   
     calibfile.print(F(","));
     calibfile.println(Channel);
   }
