@@ -23,7 +23,8 @@
 #include "SSD1306AsciiWire.h" // https://github.com/greiman/SSD1306Ascii
 #include <SPI.h>  // built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
-#include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
+//#include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
+#include "MAX31855K_NIST.h"
 #include "TClib2.h" // My utility library for this project
 
 #define ERRLED A2    // Red error LED pin
@@ -60,14 +61,14 @@ const byte chipSelect = 10; // define the Chip Select pin for SD card
 #define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31855 #6
 #define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31855 #7
 
-Adafruit_MAX31855 thermocouple0(CS_MAX0);
-Adafruit_MAX31855 thermocouple1(CS_MAX1);
-Adafruit_MAX31855 thermocouple2(CS_MAX2);
-Adafruit_MAX31855 thermocouple3(CS_MAX3);
-Adafruit_MAX31855 thermocouple4(CS_MAX4);
-Adafruit_MAX31855 thermocouple5(CS_MAX5);
-Adafruit_MAX31855 thermocouple6(CS_MAX6);
-Adafruit_MAX31855 thermocouple7(CS_MAX7);
+MAX31855K thermocouple0(CS_MAX0);
+MAX31855K thermocouple1(CS_MAX1);
+MAX31855K thermocouple2(CS_MAX2);
+MAX31855K thermocouple3(CS_MAX3);
+MAX31855K thermocouple4(CS_MAX4);
+MAX31855K thermocouple5(CS_MAX5);
+MAX31855K thermocouple6(CS_MAX6);
+MAX31855K thermocouple7(CS_MAX7);
 double temp[SAMPLES]; // temperature array
 
 // Define the set of simulated temperatures that will be provided
@@ -349,12 +350,13 @@ void loop() {
             }
             // Apply the temperature correction. Function is in 
             // the library TClib2
-            double correctedTemp = correctTemp(currTemp, internalTemp);
+//            double correctedTemp = correctTemp(currTemp, internalTemp);
             
             // Update the screen
             oled1.set2X();
             oled1.clear(48,128,6,7);
-            oled1.print(correctedTemp);
+//            oled1.print(correctedTemp);
+            oled1.print(currTemp);
             oled1.print(F(" C"));
 
             oled2.set1X();
@@ -388,7 +390,8 @@ void loop() {
     switch(Channel){
       case 0:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple0.readCelsius(),thermocouple0.readInternal());
+          temp[i] = thermocouple0.readCelsius();
+//          temp[i] = correctTemp(thermocouple0.readCelsius(),thermocouple0.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);
@@ -400,7 +403,8 @@ void loop() {
       break;
       case 1:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple1.readCelsius(),thermocouple1.readInternal());
+          temp[i] = thermocouple1.readCelsius();
+//          temp[i] = correctTemp(thermocouple1.readCelsius(),thermocouple1.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);
@@ -412,7 +416,8 @@ void loop() {
       break;
       case 2:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple2.readCelsius(),thermocouple2.readInternal());
+          temp[i] = thermocouple2.readCelsius();
+//          temp[i] = correctTemp(thermocouple2.readCelsius(),thermocouple2.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -424,7 +429,8 @@ void loop() {
       break; 
       case 3:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple3.readCelsius(),thermocouple3.readInternal());
+          temp[i] = thermocouple3.readCelsius();
+//          temp[i] = correctTemp(thermocouple3.readCelsius(),thermocouple3.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -436,7 +442,8 @@ void loop() {
       break;
       case 4:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple4.readCelsius(),thermocouple4.readInternal());
+          temp[i] = thermocouple4.readCelsius();
+//          temp[i] = correctTemp(thermocouple4.readCelsius(),thermocouple4.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -448,7 +455,8 @@ void loop() {
       break;
       case 5:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple5.readCelsius(),thermocouple5.readInternal());
+          temp[i] = thermocouple5.readCelsius();
+//          temp[i] = correctTemp(thermocouple5.readCelsius(),thermocouple5.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -460,7 +468,8 @@ void loop() {
       break;
       case 6:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple6.readCelsius(),thermocouple6.readInternal());
+          temp[i] = thermocouple6.readCelsius();
+//          temp[i] = correctTemp(thermocouple6.readCelsius(),thermocouple6.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
@@ -472,7 +481,8 @@ void loop() {
       break;
       case 7:
         for (int i = 0; i < SAMPLES; i++){
-          temp[i] = correctTemp(thermocouple7.readCelsius(),thermocouple7.readInternal());
+          temp[i] = thermocouple7.readCelsius();
+//          temp[i] = correctTemp(thermocouple7.readCelsius(),thermocouple7.readInternal());
           oled2.setCursor(0,2);
           oled2.clearToEOL();
           oled2.print(temp[i]);          
