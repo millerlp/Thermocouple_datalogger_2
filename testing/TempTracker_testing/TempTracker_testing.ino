@@ -62,7 +62,22 @@
 // Define the interval (seconds) between saved values (writing to SD card)
 #define SAVE_INTERVAL 5 // units of seconds
 
+//********************************
+// tcOffset array contains individual calibration adjustments for each
+// of the 8 MAX31855K chips on the board being programmed. These values 
+// will have been determined with the help of the Calibration_routine_OLED.ino
+// program and an external thermocouple calibrator such as an Omega CL3515R.
+// The values were generated from a linear regression fit through the sensor
+// temperatures and the known calibrator temperatures. Because the slopes of
+// the regressions between observed and expected temperatures were all 
+// effectively 1.00, we are ignoring the calibration slope here and focusing
+// only on the regression intercept (i.e. offset) that needs to be applied to
+// each output temperature to bring it as close as possible to the "true"
+// temperature measured by the thermocouple hot junction. 
+double tcOffset[] = {-0.236,0.276,-0.278,0.506,0.121,0.378,-0.182,-0.476}; // RevA1 board 1 values 2017-06-15
 
+
+//********************************
 #define ERRLED A2		// Red error LED pin
 #define GREENLED A3		// Green LED pin
 #define BUTTON1 2 		// BUTTON1 on INT0, pin PD2
@@ -367,6 +382,8 @@ void setup() {
     }
     // Calculate average temperature for sensor i
     tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+    // Apply the offset correction stored in tcOffset
+    tempAverages[i] = tempAverages[i] + tcOffset[i];
   }
   // Make a copy of the 1st set of averages for use later in main loop
   for (byte i = 0; i < 8; i++){
@@ -561,8 +578,9 @@ void loop() {
         }
         // Calculate average temperature for sensor i
         tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+        // Apply the offset correction stored in tcOffset
+        tempAverages[i] = tempAverages[i] + tcOffset[i];
       }
-
 
       if (writeFlag){
         // Call the writeToSD function to output the data array contents
@@ -895,7 +913,7 @@ void writeToSD (DateTime timestamp) {
       // in R. 
       logfile.print(F("NA"));
     } else {
-      logfile.print(tempAverages[i], 3); // 3 significant digits
+      logfile.print(tempAverages[i], 3); // truncate to 3 significant digits
     }
   }
   logfile.println();
