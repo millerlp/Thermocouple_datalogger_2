@@ -95,11 +95,6 @@ double tcSlope[] =  { 1.0027047, 0.9999684, 1.0021402, 1.0017356, 1.0011395, 1.0
 typedef enum STATE
 {
   STATE_DATA, // collecting data normally
-  STATE_ENTER_CALIB, // user wants to calibrate
-//  STATE_CALIB1, // user chooses to calibrate accel 1
-//  STATE_CALIB2, // user chooses to calibrate accel 2
-  STATE_CALIB_WAIT, // waiting for user to signal mussel is positioned
-  STATE_CALIB_ACTIVE, // taking calibration data, button press ends this
   STATE_CLOSE_FILE, // close data file, start new file
 } mainState_t;
 
@@ -169,12 +164,14 @@ double prevAverages[8]; // store previous round of sensor readings
 char filename[] = "YYYYMMDD_HHMM_00.csv";
 
 byte loopCount = 0; // counter to keep track of data sampling loops
+byte buttonCounter = 0; // counter to count loops after button press
 DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 byte SPS = SAMPLES_PER_SECOND; 
 
 DateTime buttonTime; // hold the time since the button was pressed
 DateTime chooseTime; // hold the time stamp when a waiting period starts
+DateTime checkTime; // hold time stamp when a button press debounce is updated
 DateTime calibEnterTime; // hold the time stamp when calibration mode is entered
 volatile unsigned long button1Time; // hold the initial button1 press millis() value
 volatile unsigned long button2Time; // hold the initial button2 press millis() value
@@ -192,10 +189,11 @@ bool saveData = false; // Flag to tell whether to carry out write operation on S
 bool oledScreenOn = true; // Flag to tell whether screens should be on/off
 bool writeFlag = false; // Flag to signal time to write data to SD card
 
-// Define two temperature limits for the thermocouples, values outside
-// this range will trigger the error notification
-//float TClowerlimit = 0.0;
-//float TCupperlimit = 60.0;
+
+
+
+
+
 
 //---------------- setup loop ------------------------------------------------
 void setup() {
@@ -241,6 +239,7 @@ void setup() {
 	
 								
 	Serial.begin(57600);
+  
 #ifdef ECHO_TO_SERIAL  
 	Serial.println(F("Hello"));
 	Serial.println();
@@ -259,7 +258,6 @@ void setup() {
   oled2.set400kHz();  
   oled2.setFont(Adafruit5x7);    
   oled2.clear();
-  oled2.print(F("There"));
   //----------------------------------
   bool rtcErrorFlag = false;
 
@@ -291,7 +289,6 @@ void setup() {
     oled1.set1X();
     oled1.println(F("RTC ERROR"));
     oled1.println(buf);
-    oled1.println(F("Continue?"));
 
     rtcErrorFlag = true;
     // Consider removing this while loop and allowing user to plow
@@ -317,37 +314,50 @@ void setup() {
 	// hold in an infinite loop.
         // There is an error with the SD card, halt everything
     oled1.home();
+    oled1.clear();
     oled1.println(F("SD ERROR"));
     oled1.println();
     oled1.println(F("Continue?"));
+    oled1.println(F("Press 1"));
 
     sdErrorFlag = true;
-    // Consider removing this while loop and allowing user to plow
-    // ahead without card (use button input?)
-		while(1){ // infinite loop due to SD card initialization error
-                        digitalWrite(ERRLED, HIGH);
-                        delay(100);
-                        digitalWrite(ERRLED, LOW);
-                        digitalWrite(GREENLED, HIGH);
-                        delay(100);
-                        digitalWrite(GREENLED, LOW);
-                        oled1.println();
-                        oled1.print(F("SD CARD"));
-                        oled2.print(F("ERROR"));
+    bool stallFlag = true;
+
+		while(stallFlag){ // loop due to SD card initialization error
+      digitalWrite(ERRLED, HIGH);
+      delay(100);
+      digitalWrite(ERRLED, LOW);
+      digitalWrite(GREENLED, HIGH);
+      delay(100);
+      digitalWrite(GREENLED, LOW);
+
+      if (digitalRead(BUTTON1) == LOW){
+        delay(40);  // debounce pause
+        if (digitalRead(BUTTON1) == LOW){
+          // If button is still low 40ms later, this is a real press
+          // Now wait for button to go high again
+          while(digitalRead(BUTTON1) == LOW) {;} // do nothing
+          stallFlag = false; // break out of while(stallFlag) loop
+        } 
+      }              
 		}
-	}
+	} // end of (!sd.begin(chipSelect, SPI_FULL_SPEED))
 
   // If the clock and sd card are both working, we can save data
-  if (!sdErrorFlag | !rtcErrorFlag){ saveData = true;}
+  if (!sdErrorFlag && !rtcErrorFlag){ 
+    saveData = true;
+  } else {
+    saveData = false;
+  }
 
   if (saveData){
     // If both error flags were false, continue with file generation
     newtime = rtc.now(); // grab the current time
-//    initFileName(newtime); // generate a file name
     initFileName(sd, logfile, newtime, filename); // generate a file name
 #ifdef ECHO_TO_SERIAL    
-    Serial.print("Writing to ");
+    Serial.print(F("Writing to "));
     Serial.println(filename);
+    delay(5);
 #endif
     oled1.home();
     oled1.set1X();
@@ -358,6 +368,17 @@ void setup() {
     oled2.clearToEOL();
     oled2.print(filename);
     delay(1000);          
+  } else {
+     // If saveData if false
+    oled1.home();
+    oled1.clear();
+    oled1.set2X();
+    oled1.println(F("Data will"));
+    oled1.println(F("not be"));
+    oled1.println(F("saved!"));
+    delay(1000);
+    oled1.println(F("Starting.."));
+    delay(1000);
   }
 
 //   Take 4 temperature measurements to initialize the array
@@ -381,14 +402,12 @@ void setup() {
     }
     // Calculate average temperature for sensor i
     tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
-//    // Apply the slope + offset correction stored in tcSlope and tcOffset
-//    tempAverages[i] = (tempAverages[i] * tcSlope[i]) + tcOffset[i];
   }
   // Make a copy of the 1st set of averages for use later in main loop
   for (byte i = 0; i < 8; i++){
     prevAverages[i] = tempAverages[i];
   }
-
+  // Show the first set of temperature readings:
   oled1.home();
   oled1.set2X();
   oled1.clearToEOL();
@@ -431,11 +450,9 @@ void setup() {
 
 //*************************Main loop************************************
 void loop() {
-//	delay(2); // trying this to quell bogus sd writes
 	// Always start the loop by checking the time
 	newtime = rtc.now(); // Grab the current time
-	
-	
+
 	//-------------------------------------------------------------
 	// Begin loop by checking the debounceState to 
 	// handle any button presses
@@ -483,37 +500,14 @@ void loop() {
 				// long the button was depressed. This will determine
 				// which state the user wants to enter. 
 
-				DateTime checkTime = rtc.now(); // get the time
+				checkTime = rtc.now(); // get the time
 				
 				if (checkTime.unixtime() < (buttonTime.unixtime() + mediumPressTime)) {
-					Serial.println(F("Short press registered"));
 					// User held BUTTON1 briefly, treat as a normal
 					// button press, which will be handled differently
 					// depending on which mainState the program is in.
 					button1Flag = true;
 					
-				} else if ( (checkTime.unixtime() > (buttonTime.unixtime() + mediumPressTime)) &
-					(checkTime.unixtime() < (buttonTime.unixtime() + longPressTime)) ) {
-					// User held BUTTON1 long enough to enter calibration
-					// mode, but not long enough to enter close file mode
-					mainState = STATE_ENTER_CALIB;
-					
-					// Flash both LEDs 5 times to let user know we've entered
-					// calibration mode
-					for (byte i = 0; i < 5; i++){
-						digitalWrite(ERRLED, HIGH);
-						digitalWrite(GREENLED, HIGH);
-						delay(100);
-						digitalWrite(ERRLED, LOW);
-						digitalWrite(GREENLED, LOW);
-						delay(100);
-					}
-					
-					// Start a timer for entering Calib mode, to be used to give
-					// the user time to enter 1 button press or 2 to choose 
-					// which unit to calibrate
-					chooseTime = rtc.now();
-	
 				} else if (checkTime.unixtime() > (buttonTime.unixtime() + longPressTime)){
 					// User held BUTTON1 long enough to enter close file mode
 					mainState = STATE_CLOSE_FILE;
@@ -571,42 +565,107 @@ void loop() {
         }
         // Calculate average temperature for sensor i
         tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
-        // Apply the slope + offset correction stored in tcSlope and tcOffset
-//        tempAverages[i] = (tempAverages[i] * tcSlope[i]) + tcOffset[i];
       }
 
       if (writeFlag){
-        // Call the writeToSD function to output the data array contents
-        // to the SD card 
-        writeToSD(newtime);
         writeFlag = false; // reset to false
-
-#ifdef ECHO_TO_SERIAL
+        if (saveData){
+          // Call the writeToSD function to output the data array contents
+          // to the SD card 
+          writeToSD(newtime);
+        }
+ #ifdef ECHO_TO_SERIAL
         // If ECHO_TO_SERIAL is defined at the start of the 
         // program, then this section will send updates
-        printTimeSerial(oldtime);
-        Serial.print(F(","));
+        printTimeSerial(newtime);
+        Serial.print(F("\t"));
         for (byte i = 0; i < 8; i++){
           Serial.print(tempAverages[i]);
           Serial.print(F(", "));
         }
         Serial.println();
         delay(10);
-#endif          
+#endif    
       } // end of if(writeFlag)
 
-      // Update the OLED screens with the current temperature averages
-      // once per second. 
-			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
-        if (oledScreenOn){
-          // Print stuff to screens. Function in TClib2.h
-          printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
-        } // end of if (oledScreenOn)
-        // Update the old prevAverages with these new tempAverages
-        for (byte i = 0; i < 8; i++){
-          prevAverages[i] = tempAverages[i];
-        }
-      } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))                   
+      if (button1Flag){
+        buttonCounter++;
+        // If button1Flag is true, the user requested an action. Update
+        // the OLED screens to show the current file name and time
+        // The if statements below will either display the filename and
+        // current time, or reset the screens to show temperature data
+        // depending on how long it's been. 
+        if ( (newtime.unixtime() - checkTime.unixtime()) < 5){
+          newtime.toString(buf, 20); 
+          // Now extract the time by making another character pointer that
+          // is advanced 10 places into buf to skip over the date. 
+          char *timebuf = buf + 10;
+          if (buttonCounter <= 1){
+            // Only update screen 1 on the first cycle
+            oled1.home();
+            oled1.clear();          
+            oled1.set2X();
+            for (int i = 0; i<11; i++){
+              oled1.print(buf[i]);
+            }
+            oled1.println();
+            oled1.set1X();
+            // Show the filename (or indicate data aren't being saved)
+            if (saveData){
+              oled1.println(F("Filename:"));
+              oled1.print(filename);              
+            } else {
+              oled1.println(F("No saved data"));
+            }
+          } // end of if (buttonCounter <= 1)
+
+          // Switch to screen 2, update each cycle to show time ticking
+          oled2.home();
+          oled2.set2X();
+          oled2.clear();
+          oled2.print(timebuf);
+        } else if ( (newtime.unixtime() - checkTime.unixtime()) > 5){
+          // It has been more than 5 seconds, reset button1Flag and buttonCounter
+          // and switch the OLED screens back to temperature ouput
+          button1Flag = false; // reset flag
+          buttonCounter = 0; // reset counter
+          // Re-initialize OLEDs to show temperature info.
+          oled1.home();
+          oled1.set2X();
+          oled1.clearToEOL();
+          for (byte i = 0; i < 4; i++){
+            oled1.clearToEOL();
+            oled1.print(F("Ch"));
+            oled1.print(i);
+            oled1.print(F(": "));
+            oled1.print(tempAverages[i]);
+            oled1.println(F("C"));
+          }
+          oled2.home();
+          oled2.set2X();
+          for (byte i = 4; i < 8; i++){
+            oled2.clearToEOL();
+            oled2.print(F("Ch"));
+            oled2.print(i);
+            oled2.print(F(": "));
+            oled2.print(tempAverages[i]);
+            oled2.println(F("C"));
+          } 
+        } // end of if (rtc.now() - checkTime > 5){ 
+      } else {
+        // Update the OLED screens with the current temperature averages
+        // once per second. 
+  			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
+          if (oledScreenOn){
+            // Print stuff to screens. Function in TClib2.h
+            printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
+          } // end of if (oledScreenOn)
+          // Update the old prevAverages with these new tempAverages
+          for (byte i = 0; i < 8; i++){
+            prevAverages[i] = tempAverages[i];
+          }
+        } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))   
+      }  // end of if (button1Flag)              
                         
                         
 			// Increment loopCount after writing all the sample data to
@@ -620,209 +679,19 @@ void loop() {
 			// should start again. 
 			mainState = STATE_DATA;
 		break; // end of case STATE_DATA
-		
-		//*****************************************************
-		case STATE_ENTER_CALIB:
-			// We have arrived at this state because the user held button1 down
-			// for the specified amount of time (see the debounce cases earlier)
-			// so we now allow the user to enter additional button presses to 
-			// choose which accelerometer they want to calibrate. 
-			
-			// Read a time value
-			calibEnterTime = rtc.now();
-	
-			if (calibEnterTime.unixtime() < (chooseTime.unixtime() + longPressTime)){
-				// If longPressTime has not elapsed, add any new button presses to the
-				// the pressCount value
-				if (button1Flag) {
-					pressCount++;
-					// If the user pressed the button, reset chooseTime to
-					// give them extra time to press the button again. 
-					chooseTime = calibEnterTime;
-					button1Flag = false; // reset buttonFlag
-					// If more than 2 button presses are registered, cycle
-					// back around to zero.
-					if (pressCount > 2) {
-						pressCount = 0;
-					}
-					Serial.print(F("Button1 press "));
-					Serial.println(pressCount);
 
-					// Flash the green led 1 or 2 times to show current count
-					if (pressCount > 0) {
-						for (byte i = 0; i < pressCount; i++){
-							digitalWrite(GREENLED, HIGH);
-							delay(200);
-							digitalWrite(GREENLED, LOW);
-							delay(200);
-						}
-					} else if (pressCount == 0) {
-						// Flash red LED to show that we haven't 
-						// got a useful choice
-						digitalWrite(ERRLED, HIGH);
-						delay(250);
-						digitalWrite(ERRLED, LOW);
-						delay(250);
-					}
-				}
-				mainState = STATE_ENTER_CALIB; // remain in this state
-			} else if (calibEnterTime.unixtime() >= (chooseTime.unixtime() + longPressTime)){
-				// The wait time for button presses has elapsed, now deal with 
-				// the user's choice based on the value in pressCount
-				switch (pressCount) {
-					case 0:
-						// If the user didn't press the button again, return
-						// to normal data taking mode
-						mainState = STATE_DATA; 
-						Serial.println(F("Returning to data state"));
-						digitalWrite(ERRLED, HIGH);
-						digitalWrite(GREENLED, HIGH);
-						delay(500);
-						digitalWrite(ERRLED, LOW);
-						digitalWrite(GREENLED, LOW);	
-					break;
-					case 1:
-						// If the user pressed one time, we'll calibrate accel 1
-						mainState = STATE_CALIB_WAIT;
-						pressCount = 1;
-						Serial.println(F("Calib accel 1"));
-						digitalWrite(ERRLED, HIGH);
-						digitalWrite(GREENLED, HIGH);
-						delay(500);
-						digitalWrite(ERRLED, LOW);
-						digitalWrite(GREENLED, LOW);
-						delay(1300);
-						for (byte i = 0; i < pressCount; i++){
-							digitalWrite(GREENLED, HIGH);
-							delay(250);
-							digitalWrite(GREENLED, LOW);
-							delay(250);
-						}
-						delay(1000);
-					break;
-					case 2:
-						// If the user pressed two times, we'll calibrate accel 2
-						mainState = STATE_CALIB_WAIT;
-						pressCount = 2;
-						Serial.println(F("Calib accel 2"));
-						digitalWrite(ERRLED, HIGH);
-						digitalWrite(GREENLED, HIGH);
-						delay(500);
-						digitalWrite(ERRLED, LOW);
-						digitalWrite(GREENLED, LOW);
-						delay(1300);
-						for (byte i = 0; i < pressCount; i++){
-							digitalWrite(GREENLED, HIGH);
-							delay(200);
-							digitalWrite(GREENLED, LOW);
-							delay(200);
-						}		
-						delay(1000);
-					break;
-				} 
-			}
-		break; // end of STATE_CALIB_ENTER
-		//*****************************************************
- 		case STATE_CALIB_WAIT:
-			// If the user entered either 1 or 2 button presses in 
-			// STATE_CALIB_ENTER, then we should arrive here. 
-			// Now we wait for the user to get the mussel situated and 
-			// press the button one more time to begin taking data.
-			// The green led will pulse on and off at 1Hz while waiting
-			if (newtime.second() != calibEnterTime.second() ) {
-				Serial.println(F("Waiting..."));
-				calibEnterTime = newtime; // reset calibEnterTime
-				digitalWrite(GREENLED, !digitalRead(GREENLED));
-			}
-			
-			// If the user finally presses the button, enter the active
-			// calibration state
-			if (button1Flag) {
-				mainState = STATE_CALIB_ACTIVE;
-				button1Flag = false; // reset button1Flag
-				// Create a data output file
-//				initCalibFile(sd, logfile, newtime, filename);
-//				Serial.print(F("Writing to "));
-//				Serial.println(filenameCalib);
-				if (pressCount == 1){
-					delay(5);
-				} else if (pressCount == 2) {
-					delay(5);
-				}
-			}
-			
-		break;
-		//*****************************************************
-		case STATE_CALIB_ACTIVE:
-//			// Write accelerometer/compass data to the calibration file
-//			newMillis = millis(); // get current millis value
-//			// If 10 or more milliseconds have elapsed, take a new
-//			// reading from the accel/compass
-//			if (newMillis >= prevMillis + 10) {
-//				prevMillis = newMillis; // update millis
-//				// Reopen logfile. If opening fails, notify the user
-//				if (!calibfile.isOpen()) {
-//					if (!calibfile.open(filenameCalib, O_RDWR | O_CREAT | O_AT_END)) {
-//						digitalWrite(ERRLED, HIGH); // turn on error LED
-//					}
-//				}
-//				// Choose which accel to sample based on pressCount value
-//				switch (pressCount) {
-//					case 1:
-//						digitalWrite(GREENLED, HIGH);
-//
-//						digitalWrite(GREENLED, LOW);
-//					break;
-//					
-//					case 2:
-//						digitalWrite(GREENLED, HIGH);
-//						
-//						digitalWrite(GREENLED, LOW);
-//					break;
-//				} // end of switch (pressCount)
-//			}
-//			
-//			// The user can press button1 again to end calibration mode
-//			// This would set buttonFlag true, and cause the if statement
-//			// below to execute
-// 			if (button1Flag) {
-//				button1Flag = false;
-//				calibfile.close(); // close and save the calib file
-//				Serial.println(F("Saving calib file"));
-//				// Set the accel/magnetometer back to normal slow
-//				// mode (50Hz accel with antialias filter, 6.25Hz magnetometer)
-//				if (pressCount == 1){
-//
-//					delay(5);
-//
-//				} else if (pressCount == 2) {
-//
-//					delay(5);
-//
-//				}
-////				initFileName(newtime); // open a new data file
-//        initFileName(sd, logfile, newtime, filename); // open a new data file
-//				mainState = STATE_DATA; // return to STATE_DATA
-//				// Flash both LEDs 5 times to let user know we've exited
-//				// calibration mode
-//				for (byte i = 0; i < 5; i++){
-//					digitalWrite(ERRLED, HIGH);
-//					digitalWrite(GREENLED, HIGH);
-//					delay(100);
-//					digitalWrite(ERRLED, LOW);
-//					digitalWrite(GREENLED, LOW);
-//					delay(100);
-//				}
-//			} // end of if(button1Flag) statement
-			
-		break; 
-		
 		//*****************************************************
  		case STATE_CLOSE_FILE:
-			// If user held button 1 down for at least 6 seconds, they want 
+			// If user held button 1 down for at least 10 seconds, they want 
 			// to close the current data file and open a new one. 
 			logfile.close(); // Make sure the data file is closed and saved.
-			
+      oled1.home();
+      oled1.clear();
+      oled1.set2X();
+      oled1.println(F("File"));
+      oled1.println(F("Closed"));
+      oled1.set1X();
+      oled1.println(filename);
 			// Briefly flash the green led to show that program 
 			// has closed the data file and started a new one. 
 			for (byte i = 0; i < 15; i++){
@@ -831,14 +700,17 @@ void loop() {
 				digitalWrite(GREENLED, LOW);
 				delay(100);
 			}
-
-      initFileName(sd, logfile, rtc.now(), filename ); // Open a new output file
+      // Open a new output file
+      initFileName(sd, logfile, rtc.now(), filename ); 
 #ifdef ECHO_TO_SERIAL
-			Serial.print(F("Writing to "));
+			Serial.print(F("New file: "));
+      Serial.println(filename);
 			printTimeSerial(newtime);
 			Serial.println();
 #endif		
 			mainState = STATE_DATA; // Return to normal data collection
+      button1Flag = true; // Set true so that OLED screens display new filename briefly
+      checkTime = rtc.now();
   break; // end of case STATE_FILE_CLOSE
 		
 	} // End of switch (mainState) statement
@@ -920,3 +792,11 @@ void writeToSD (DateTime timestamp) {
   }
 }
 
+//---------freeRam-----------
+// A function to estimate the remaining free dynamic memory. On a 328P (Uno), 
+// the dynamic memory is 2048 bytes.
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
