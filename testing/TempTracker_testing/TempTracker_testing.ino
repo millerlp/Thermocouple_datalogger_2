@@ -44,7 +44,7 @@
 #include "SSD1306AsciiWire.h" // https://github.com/greiman/SSD1306Ascii
 #include <SPI.h>	// built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
-#include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
+#include "MAX31855K_NIST.h" // https://github.com/millerlp/MAX31855K_NIST
 #include "TClib2.h" // My utility library for this project
 
 // Various additional libraries for access to sleep mode functions
@@ -135,22 +135,15 @@ const byte chipSelect = 10; // define the Chip Select pin for SD card
 #define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31855 #6
 #define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31855 #7
 
-Adafruit_MAX31855 thermocouple0(CS_MAX0);
-Adafruit_MAX31855 thermocouple1(CS_MAX1);
-Adafruit_MAX31855 thermocouple2(CS_MAX2);
-Adafruit_MAX31855 thermocouple3(CS_MAX3);
-Adafruit_MAX31855 thermocouple4(CS_MAX4);
-Adafruit_MAX31855 thermocouple5(CS_MAX5);
-Adafruit_MAX31855 thermocouple6(CS_MAX6);
-Adafruit_MAX31855 thermocouple7(CS_MAX7);
-double temp0 = 0; // hold output from MAX31855 #0
-double temp1 = 0; // hold output from MAX31855 #1
-double temp2 = 0; // hold output from MAX31855 #2
-double temp3 = 0; // hold output from MAX31855 #3
-double temp4 = 0; // hold output from MAX31855 #4
-double temp5 = 0; // hold output from MAX31855 #5
-double temp6 = 0; // hold output from MAX31855 #6
-double temp7 = 0; // hold output from MAX31855 #7
+MAX31855K thermocouple0(CS_MAX0);
+MAX31855K thermocouple1(CS_MAX1);
+MAX31855K thermocouple2(CS_MAX2);
+MAX31855K thermocouple3(CS_MAX3);
+MAX31855K thermocouple4(CS_MAX4);
+MAX31855K thermocouple5(CS_MAX5);
+MAX31855K thermocouple6(CS_MAX6);
+MAX31855K thermocouple7(CS_MAX7);
+
 
 
 // Declare data arrays
@@ -236,10 +229,7 @@ void setup() {
 	Serial.begin(57600);
 #ifdef ECHO_TO_SERIAL  
 	Serial.println(F("Hello"));
-//	Serial.print(F("MCUSR contents: "));
-//	printBits(mcusr);
 	Serial.println();
-	
 #endif
 
 
@@ -327,6 +317,9 @@ void setup() {
                         digitalWrite(GREENLED, HIGH);
                         delay(100);
                         digitalWrite(GREENLED, LOW);
+                        oled1.println();
+                        oled1.print(F("SD CARD"));
+                        oled2.print(F("ERROR"));
 		}
 	}
 
@@ -902,7 +895,7 @@ void writeToSD (DateTime timestamp) {
       // in R. 
       logfile.print(F("NA"));
     } else {
-      logfile.print(tempAverages[i]);
+      logfile.print(tempAverages[i], 3); // 3 significant digits
     }
   }
   logfile.println();
