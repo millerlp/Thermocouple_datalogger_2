@@ -23,8 +23,7 @@
 #include "SSD1306AsciiWire.h" // https://github.com/greiman/SSD1306Ascii
 #include <SPI.h>  // built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
-//#include "Adafruit_MAX31855.h" // https://github.com/adafruit/Adafruit-MAX31855-library
-#include "MAX31855K_NIST.h"
+#include "MAX31855K_NIST.h" // https://github.com/millerlp/MAX31855K_NIST
 #include "TClib2.h" // My utility library for this project
 
 #define ERRLED A2    // Red error LED pin
