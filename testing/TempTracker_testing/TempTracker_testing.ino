@@ -64,18 +64,17 @@
 
 //********************************
 // tcOffset array contains individual calibration adjustments for each
-// of the 8 MAX31855K chips on the board being programmed. These values 
+// of the 8 MAX31855K chips on the board being programmed. tcSlope contains
+// calibration slope adjustments in the same manner. These values 
 // will have been determined with the help of the Calibration_routine_OLED.ino
 // program and an external thermocouple calibrator such as an Omega CL3515R.
 // The values were generated from a linear regression fit through the sensor
-// temperatures and the known calibrator temperatures. Because the slopes of
-// the regressions between observed and expected temperatures were all 
-// effectively 1.00, we are ignoring the calibration slope here and focusing
-// only on the regression intercept (i.e. offset) that needs to be applied to
-// each output temperature to bring it as close as possible to the "true"
-// temperature measured by the thermocouple hot junction. 
-double tcOffset[] = {-0.236,0.276,-0.278,0.506,0.121,0.378,-0.182,-0.476}; // RevA1 board 1 values 2017-06-15
+// temperatures and the known calibrator temperatures. 
 
+// Values for RevA1 board 1, calibrated on 2017-06-15
+//                      Ch0         Ch1       Ch2         Ch3       Ch4         Ch5       Ch6         Ch7                  
+double tcOffset[] = {-0.2352983, 0.2763315,-0.2781568, 0.5066493, 0.1212014, 0.3781640,-0.1821470,-0.4756476}; 
+double tcSlope[] =  { 1.0027047, 0.9999684, 1.0021402, 1.0017356, 1.0011395, 1.0018918, 1.0018701, 1.0016286};
 
 //********************************
 #define ERRLED A2		// Red error LED pin
@@ -363,14 +362,14 @@ void setup() {
 
 //   Take 4 temperature measurements to initialize the array
   for (byte i = 0; i < AVG_WINDOW; i++){
-    tempArray[i][0] = thermocouple0.readCelsius(); delay(15);
-    tempArray[i][1] = thermocouple1.readCelsius(); delay(15);
-    tempArray[i][2] = thermocouple2.readCelsius(); delay(15);
-    tempArray[i][3] = thermocouple3.readCelsius(); delay(15);
-    tempArray[i][4] = thermocouple4.readCelsius(); delay(15);
-    tempArray[i][5] = thermocouple5.readCelsius(); delay(15);
-    tempArray[i][6] = thermocouple6.readCelsius(); delay(15);
-    tempArray[i][7] = thermocouple7.readCelsius(); delay(15);
+    tempArray[i][0] = (thermocouple0.readCelsius() * tcSlope[0]) + tcOffset[0]; delay(15);
+    tempArray[i][1] = (thermocouple1.readCelsius() * tcSlope[1]) + tcOffset[1]; delay(15);
+    tempArray[i][2] = (thermocouple2.readCelsius() * tcSlope[2]) + tcOffset[2]; delay(15);
+    tempArray[i][3] = (thermocouple3.readCelsius() * tcSlope[3]) + tcOffset[3]; delay(15);
+    tempArray[i][4] = (thermocouple4.readCelsius() * tcSlope[4]) + tcOffset[4]; delay(15);
+    tempArray[i][5] = (thermocouple5.readCelsius() * tcSlope[5]) + tcOffset[5]; delay(15);
+    tempArray[i][6] = (thermocouple6.readCelsius() * tcSlope[6]) + tcOffset[6]; delay(15);
+    tempArray[i][7] = (thermocouple7.readCelsius() * tcSlope[7]) + tcOffset[7]; delay(15);
   }
 
   // Now calculate the average of the 4 readings for each sensor i
@@ -382,8 +381,8 @@ void setup() {
     }
     // Calculate average temperature for sensor i
     tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
-    // Apply the offset correction stored in tcOffset
-    tempAverages[i] = tempAverages[i] + tcOffset[i];
+//    // Apply the slope + offset correction stored in tcSlope and tcOffset
+//    tempAverages[i] = (tempAverages[i] * tcSlope[i]) + tcOffset[i];
   }
   // Make a copy of the 1st set of averages for use later in main loop
   for (byte i = 0; i < 8; i++){
@@ -546,30 +545,24 @@ void loop() {
      if ( abs(newtime.second() - oldtime.second()) >= SAVE_INTERVAL) {
 				oldtime = newtime; // update oldtime
         writeFlag = true; // set flag to write data to SD				
-        // This will force a SD card write once per second
+        // This will force a SD card write at the SAVE_INTERVAL (seconds)
 			}
 
       if (loopCount >= AVG_WINDOW){
-        loopCount = 0; // reset to beging writing at start of array
+        loopCount = 0; // reset to begin writing at start of array
       }
+     
+      // Read each of the sensors, and apply the calibration slope + offset
+      tempArray[loopCount][0] = (thermocouple0.readCelsius() * tcSlope[0]) + tcOffset[0]; delay(15);
+      tempArray[loopCount][1] = (thermocouple1.readCelsius() * tcSlope[1]) + tcOffset[1]; delay(15);
+      tempArray[loopCount][2] = (thermocouple2.readCelsius() * tcSlope[2]) + tcOffset[2]; delay(15);
+      tempArray[loopCount][3] = (thermocouple3.readCelsius() * tcSlope[3]) + tcOffset[3]; delay(15);
+      tempArray[loopCount][4] = (thermocouple4.readCelsius() * tcSlope[4]) + tcOffset[4]; delay(15);
+      tempArray[loopCount][5] = (thermocouple5.readCelsius() * tcSlope[5]) + tcOffset[5]; delay(15);
+      tempArray[loopCount][6] = (thermocouple6.readCelsius() * tcSlope[6]) + tcOffset[6]; delay(15);
+      tempArray[loopCount][7] = (thermocouple7.readCelsius() * tcSlope[7]) + tcOffset[7]; delay(15);
 
-      // Debugging
-//      Serial.println();
-//      Serial.print(loopCount);
-//      Serial.print(F(" "));
-//      printTimeSerial(newtime);
-      
-      // Read each of the sensors
-      tempArray[loopCount][0] = thermocouple0.readCelsius();
-      tempArray[loopCount][1] = thermocouple1.readCelsius();
-      tempArray[loopCount][2] = thermocouple2.readCelsius();
-      tempArray[loopCount][3] = thermocouple3.readCelsius();
-      tempArray[loopCount][4] = thermocouple4.readCelsius();
-      tempArray[loopCount][5] = thermocouple5.readCelsius();
-      tempArray[loopCount][6] = thermocouple6.readCelsius();
-      tempArray[loopCount][7] = thermocouple7.readCelsius();
-
-      // Calculate the average of the 4 readings for each sensor i
+      // Calculate the average of the readings for each sensor i
       for (byte i = 0; i < 8; i++){
         double tempsum = 0;
         for (byte j = 0; j < AVG_WINDOW; j++){
@@ -578,8 +571,8 @@ void loop() {
         }
         // Calculate average temperature for sensor i
         tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
-        // Apply the offset correction stored in tcOffset
-        tempAverages[i] = tempAverages[i] + tcOffset[i];
+        // Apply the slope + offset correction stored in tcSlope and tcOffset
+//        tempAverages[i] = (tempAverages[i] * tcSlope[i]) + tcOffset[i];
       }
 
       if (writeFlag){
@@ -601,7 +594,9 @@ void loop() {
         delay(10);
 #endif          
       } // end of if(writeFlag)
-      
+
+      // Update the OLED screens with the current temperature averages
+      // once per second. 
 			if (loopCount == (SAMPLES_PER_SECOND - 1)) {
         if (oledScreenOn){
           // Print stuff to screens. Function in TClib2.h
