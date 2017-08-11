@@ -55,10 +55,14 @@
 #define CS1    A0
 #define CS2    7
 #define CS3    6
+#define CS_MAX4 5 // Arduino pin PD5, digital 5, Chip Select for MAX31855 #4
+#define CS_MAX5 4 // Arduino pin PD4, digital 4, Chip Select for MAX31855 #5
+#define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31855 #6
+#define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31855 #7
 #define SDI    11
 #define SDO    12
 
-#define NUM_MAX31856   4
+#define NUM_MAX31856   8
 
 // MAX31856 Initial settings (see MAX31856.h and the MAX31856 datasheet)
 // The default noise filter is 60Hz, suitable for the USA
@@ -71,7 +75,11 @@ MAX31856 *TemperatureSensor[NUM_MAX31856] = {
   new MAX31856(SDI, SDO, CS0, SCK),
   new MAX31856(SDI, SDO, CS1, SCK),
   new MAX31856(SDI, SDO, CS2, SCK),
-  new MAX31856(SDI, SDO, CS3, SCK)
+  new MAX31856(SDI, SDO, CS3, SCK),
+  new MAX31856(SDI, SDO, CS_MAX4, SCK),
+  new MAX31856(SDI, SDO, CS_MAX5, SCK),
+  new MAX31856(SDI, SDO, CS_MAX6, SCK),
+  new MAX31856(SDI, SDO, CS_MAX7, SCK)
 };
 
 void setup() {
@@ -97,12 +105,12 @@ void loop () {
     // Display the junction (IC) temperature first
     // Sometimes the junction temperature is not provided until a thermocouple is attached
     double temperature = TemperatureSensor[i]->readJunction(CELSIUS);
-    if (temperature == NO_MAX31856)
-      continue;
-    Serial.print("J");
-    Serial.print(i);
-    Serial.print("=");
-    printTemperature(temperature);
+//    if (temperature == NO_MAX31856)
+//      continue;
+//    Serial.print("J");
+//    Serial.print(i);
+//    Serial.print("=");
+//    printTemperature(temperature);
 
     // Display the thermocouple temperature
     temperature = TemperatureSensor[i]->readThermocouple(CELSIUS);
