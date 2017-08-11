@@ -1,6 +1,6 @@
 /* Serial_clock_test
  * 
- * For Thermocouple_datalogger_RevA hardware
+ * For Thermocouple_datalogger_RevA and RevB hardware
  * Luke Miller June 2017
  * 
  * Test functionality of the serial monitor, buttons,
