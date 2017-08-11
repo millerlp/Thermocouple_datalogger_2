@@ -1,6 +1,6 @@
 /* Quick blink test
  *  
- *  For Thermocouple_datalogger_RevA hardware
+ *  For Thermocouple_datalogger_RevA and RevB hardware
  *  Luke Miller June 2017 
  *  
  *  
