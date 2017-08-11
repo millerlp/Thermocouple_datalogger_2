@@ -17,13 +17,14 @@
  * 
  */
 
+#include "MAX31856.h" // https://github.com/engineertype/MAX31856
 #include "SdFat.h" // https://github.com/greiman/SdFat
 #include <Wire.h>  // built in library, for I2C communications
 #include "SSD1306Ascii.h" // https://github.com/greiman/SSD1306Ascii
 #include "SSD1306AsciiWire.h" // https://github.com/greiman/SSD1306Ascii
 #include <SPI.h>  // built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
-#include "MAX31856.h" // https://github.com/engineertype/MAX31856
+
 #include "TClib2.h" // My utility library for this project https://github.com/millerlp/TClib2/
 
 #define ERRLED A2    // Red error LED pin
