@@ -24,7 +24,7 @@
 #include "SSD1306AsciiWire.h" // https://github.com/greiman/SSD1306Ascii
 #include <SPI.h>  // built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
-#include <Adafruit_MAX31856.h> // https://github.com/adafruit/Adafruit_MAX31856
+#include <Adafruit_MAX31856.h> // https://github.com/millerlp/Adafruit_MAX31856
 
 #include "TClib2.h" // My utility library for this project https://github.com/millerlp/TClib2/
 
