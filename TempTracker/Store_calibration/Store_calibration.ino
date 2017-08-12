@@ -29,6 +29,7 @@
  */
 
 #include <EEPROM.h>
+#include "TClib2.h" // https://github.com/millerlp/TClib2
 
 // Enter your calibation values here (offset = intercept, slope = slope) for each
 // channel. If you lack values for any channels, leave that channel's offset value
@@ -57,7 +58,7 @@ void setup()
   EEPROM_WriteFloat(&tcSlope[i], (i+shiftAddr));
  } 
 
-
+  // Read the results back out to show that the writing worked
  for (int memEntry = 0; memEntry < 16; memEntry++){
   EEPROM_ReadFloat(&readout, memEntry);   
   Serial.println(readout, DEC);   
@@ -69,28 +70,5 @@ void loop()
 {
 }
 
-
-//**********EEPROM_WriteFloat***************************
-// Function to write a float value (4 bytes) to EEPROM
-void EEPROM_WriteFloat(float *num, int MemPos)
-{
- byte ByteArray[4];
- memcpy(ByteArray, num, 4);
- for(int x = 0; x < 4; x++)
- {
-   EEPROM.write((MemPos * 4) + x, ByteArray[x]);
- }  
-}
-//*********EEPROM_ReadFloat*********************************
-// Function to read back a float value (4 bytes) from EEPROM
-void EEPROM_ReadFloat(float *num, int MemPos)
-{
- byte ByteArray[4];
- for(int x = 0; x < 4; x++)
- {
-   ByteArray[x] = EEPROM.read((MemPos * 4) + x);    
- }
- memcpy(num, ByteArray, 4);
-}
 
 
