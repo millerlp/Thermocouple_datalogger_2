@@ -34,6 +34,10 @@
                 Red permanently on: SD card not found after data collection started
 		Red flash every ~8 seconds: In brownout mode, data collection has stopped
 
+
+   If you get a compiler warning (not error) about involving
+   "static EEPROMClass EEPROM;", you may safely ignore it. 
+
 */
 
 #include "SdFat.h" // https://github.com/greiman/SdFat
@@ -43,7 +47,7 @@
 #include <SPI.h>	// built in library, for SPI communications
 #include "RTClib.h" // https://github.com/millerlp/RTClib
 #include <Adafruit_MAX31856.h> // https://github.com/millerlp/Adafruit_MAX31856
-#include "TClib2.h" // My utility library for this project
+#include "TClib2.h" // My utility library for this project https://github.com/millerlp/TClib2
 
 // Various additional libraries for access to sleep mode functions
 #include <avr/interrupt.h>
@@ -70,7 +74,10 @@
 // temperatures and the known calibrator temperatures. 
 
 // Default values, if there is not calibration done, should be 0 for tcOffset
-// and 1.0 for tcSlope
+// and 1.0 for tcSlope. Do not change these, instead if you have calibration 
+// values they should be written to the board's EEPROM memory with the program
+// Store_calibration.ino, so that each board can have its own calibration data
+// onboard without having to update/change this main program.
 //                      Ch0         Ch1       Ch2         Ch3       Ch4         Ch5       Ch6         Ch7                  
 double tcOffset[] = { 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000}; 
 double tcSlope[] =  { 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000};
@@ -133,15 +140,15 @@ SdFile calibfile; // for sd card, this is the calibration file to write
 const byte chipSelect = 10; // define the Chip Select pin for SD card
 
 //************
-// Define MAX31855 objects, need 8 of them for the 8 separate chips
-#define CS_MAX0 A1 // Arduino pin PC1, analog 1, Chip Select for MAX31855 #0
-#define CS_MAX1 A0 // Arduino pin PC0, analog 0, Chip Select for MAX31855 #1
-#define CS_MAX2 7 // Arduino pin PD7, digital 7, Chip Select for MAX31855 #2
-#define CS_MAX3 6 // Arduino pin PD6, digital 6, Chip Select for MAX31855 #3
-#define CS_MAX4 5 // Arduino pin PD5, digital 5, Chip Select for MAX31855 #4
-#define CS_MAX5 4 // Arduino pin PD4, digital 4, Chip Select for MAX31855 #5
-#define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31855 #6
-#define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31855 #7
+// Define MAX31856 chip select pins, need 8 of them for the 8 separate chips
+#define CS_MAX0 A1 // Arduino pin PC1, analog 1, Chip Select for MAX31856 #0
+#define CS_MAX1 A0 // Arduino pin PC0, analog 0, Chip Select for MAX31856 #1
+#define CS_MAX2 7 // Arduino pin PD7, digital 7, Chip Select for MAX31856 #2
+#define CS_MAX3 6 // Arduino pin PD6, digital 6, Chip Select for MAX31856 #3
+#define CS_MAX4 5 // Arduino pin PD5, digital 5, Chip Select for MAX31856 #4
+#define CS_MAX5 4 // Arduino pin PD4, digital 4, Chip Select for MAX31856 #5
+#define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31856 #6
+#define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31856 #7
 #define NUM_MAX31856  8 // 8 thermocouple channels
 
 // Create the TempSensor object, defining the pins used for communication
@@ -185,7 +192,7 @@ byte pressCount = 0; // counter for number of button presses
 unsigned long prevMillis;	// counter for faster operations
 unsigned long newMillis;	// counter for faster operations
 
-
+float readout = NAN; // Reading back EEPROM calibration values
 bool saveData = false; // Flag to tell whether to carry out write operation on SD card
 bool oledScreenOn = true; // Flag to tell whether screens should be on/off
 bool writeFlag = false; // Flag to signal time to write data to SD card
@@ -207,7 +214,7 @@ void setup() {
 	pinMode(GREENLED,OUTPUT);
 	digitalWrite(GREENLED, LOW);
 	// Set the SPI bus chip select pins as outputs
-	// for the MAX31855 thermocouple chips
+	// for the MAX31856 thermocouple chips
 	pinMode(CS_MAX0, OUTPUT);
 	digitalWrite(CS_MAX0, HIGH);
 	pinMode(CS_MAX1, OUTPUT);
@@ -390,6 +397,44 @@ void setup() {
     oled1.println(F("Starting.."));
     delay(1000);
   }
+
+  //****************************************
+  // Read calibration coefficients from EEPROM, if present
+ for (int memEntry = 0; memEntry < 8; memEntry++){
+  // Read eeprom at memEntry address and store in readout
+  EEPROM_ReadFloat(&readout, memEntry);   
+  // Handle cases where the value coming back is 0xFFFFFFFF
+  // which is what happens if EEPROM was never written to.
+  if (isnan(readout)){
+    // If true, there was no value stored, so keep the 
+    // default value in tcOffset
+  } else if (!isnan(readout)){
+    // Stick the value in the tcOffset array
+    tcOffset[memEntry] = readout;
+  }
+ }
+ 
+  // Now read out memory positions 8-16, which should contain
+  // slope values for the calibration.
+  for (int memEntry = 8; memEntry < 16; memEntry++){
+  // Read eeprom at memEntry address and store in readout
+  EEPROM_ReadFloat(&readout, memEntry);   
+  // Handle cases where the value coming back is 0xFFFFFFFF
+  // which is what happens if EEPROM was never written to.
+  if (isnan(readout)){
+    // If true, there was no value stored, so keep the 
+    // default value in tcOffset
+  } else if (!isnan(readout)){
+    // Stick the value in the tcOffset array
+    tcSlope[memEntry-8] = readout;
+  }
+ }
+ Serial.println(F("Using coefficients:"));
+ for (int i = 0; i < 8; i++){
+  Serial.print(tcOffset[i]);
+  Serial.print(F("\t"));
+  Serial.println(tcSlope[i]);
+ }
   
   // Initialize the temperature sensor chips
   for (int i=0; i<NUM_MAX31856;i++){
@@ -606,7 +651,7 @@ void loop() {
         Serial.print(F("\t"));
         for (byte i = 0; i < 8; i++){
           Serial.print(tempAverages[i]);
-          Serial.print(F(", "));
+          Serial.print(F("\t"));
         }
         Serial.println();
         delay(10);
