@@ -114,7 +114,7 @@ void setup() {
   pinMode(GREENLED,OUTPUT);
   digitalWrite(GREENLED, LOW);
   // Set the SPI bus chip select pins as outputs
-  // for the MAX31855 thermocouple chips
+  // for the MAX31856 thermocouple chips
   pinMode(CS_MAX0, OUTPUT);
   digitalWrite(CS_MAX0, HIGH);
   pinMode(CS_MAX1, OUTPUT);
@@ -155,8 +155,7 @@ void setup() {
     TempSensor[i]->begin();
     TempSensor[i]->setThermocoupleType(MAX31856_TCTYPE_K);
   }
-//  max0.begin();
-//  max0.setThermocoupleType(MAX31856_TCTYPE_K);
+
   // Read back the thermocouple type to make sure it was set successfully
   Serial.print("Thermocouple type: "); 
   for (int i=0; i<NUM_MAX31856;i++){
@@ -174,21 +173,6 @@ void setup() {
       default: Serial.println("Unknown"); break;
     }
   }
-
-//  switch ( max0.getThermocoupleType() ) {  // Read TC type
-//    case MAX31856_TCTYPE_B: Serial.println("B Type"); break;
-//    case MAX31856_TCTYPE_E: Serial.println("E Type"); break;
-//    case MAX31856_TCTYPE_J: Serial.println("J Type"); break;
-//    case MAX31856_TCTYPE_K: Serial.println("K Type"); break;
-//    case MAX31856_TCTYPE_N: Serial.println("N Type"); break;
-//    case MAX31856_TCTYPE_R: Serial.println("R Type"); break;
-//    case MAX31856_TCTYPE_S: Serial.println("S Type"); break;
-//    case MAX31856_TCTYPE_T: Serial.println("T Type"); break;
-//    case MAX31856_VMODE_G8: Serial.println("Voltage x8 Gain mode"); break;
-//    case MAX31856_VMODE_G32: Serial.println("Voltage x8 Gain mode"); break;
-//    default: Serial.println("Unknown"); break;
-//  }
-
 
 // Initialize the real time clock DS3231M
   Wire.begin(); // Start the I2C library with default options
