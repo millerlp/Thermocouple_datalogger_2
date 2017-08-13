@@ -472,17 +472,17 @@ void setup() {
   Serial.print("Thermocouple type: "); 
   for (int i=0; i<NUM_MAX31856;i++){
     switch ( TempSensor[i]->getThermocoupleType() ) {  // Read TC type
-      case MAX31856_TCTYPE_B: Serial.println("B Type"); break;
-      case MAX31856_TCTYPE_E: Serial.println("E Type"); break;
-      case MAX31856_TCTYPE_J: Serial.println("J Type"); break;
-      case MAX31856_TCTYPE_K: Serial.println("K Type"); break;
-      case MAX31856_TCTYPE_N: Serial.println("N Type"); break;
-      case MAX31856_TCTYPE_R: Serial.println("R Type"); break;
-      case MAX31856_TCTYPE_S: Serial.println("S Type"); break;
-      case MAX31856_TCTYPE_T: Serial.println("T Type"); break;
-      case MAX31856_VMODE_G8: Serial.println("Voltage x8 Gain mode"); break;
-      case MAX31856_VMODE_G32: Serial.println("Voltage x8 Gain mode"); break;
-      default: Serial.println("Unknown"); break;
+      case MAX31856_TCTYPE_B: Serial.println(F("B")); break;
+      case MAX31856_TCTYPE_E: Serial.println(F("E")); break;
+      case MAX31856_TCTYPE_J: Serial.println(F("J")); break;
+      case MAX31856_TCTYPE_K: Serial.println(F("K")); break;
+      case MAX31856_TCTYPE_N: Serial.println(F("N")); break;
+      case MAX31856_TCTYPE_R: Serial.println(F("R")); break;
+      case MAX31856_TCTYPE_S: Serial.println(F("S")); break;
+      case MAX31856_TCTYPE_T: Serial.println(F("T")); break;
+      case MAX31856_VMODE_G8: Serial.println(F("Voltage x8 Gain mode")); break;
+      case MAX31856_VMODE_G32: Serial.println(F("Voltage x8 Gain mode")); break;
+      default: Serial.println(F("Unknown")); break;
     }
   }
   // Take 4 temperature readings to initialize tempArray
