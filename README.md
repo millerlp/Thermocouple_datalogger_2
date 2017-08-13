@@ -50,7 +50,7 @@ chip-to-chip variation from the factory can easily swamp that and only get you
 within +/- 2C of the true temperature in the normal biological range of temperatures. Careful calibration and housing the datalogger board in a thermally stable container 
 should get you within 0.1C across channels. 
 
-## A word about the housing and thermal stability
+## Several words about the housing and thermal stability
 
 The thermocouple-to-digital chips rely on an internal temperature sensor in the chip
 itself to measure the "cold junction" temperature. This temperature is ideally equivalent
@@ -79,7 +79,7 @@ After provisioning an isothermal block, it would also be useful to then enclose 
 datalogger board in a housing that will stay relatively temperature-stable, or at 
 least won't change temperature rapidly at different places. Surrounding the board in
 insulating styrofoam may be desirable, and then placing that inside a plastic or metal housing that only exposes the front of the thermocouple connectors to the outside air. 
-The RevB board is designed so that panel-mount buttons can be attached to wire leads and  
+The RevB board is designed so that panel-mount buttons can be attached to wire leads and 
 plugged into the board (via standard 0.1" headers), so that the buttons can be
 mounted to a housing. The 2 OLED displays can be attached via 4-wire cables in the 
 same manner. The rear/bottom edge of the board (opposite the thermocouple connectors) will 
