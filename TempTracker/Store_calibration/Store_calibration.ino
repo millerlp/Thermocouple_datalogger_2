@@ -44,7 +44,7 @@ void setup()
 {
  Serial.begin(57600);
  Serial.println("Resetting eeprom");
- for (uint16_t i = 0; i < EEPROM.length(); i++){
+ for (uint16_t i = 0; i < (4*16); i++){  // reset 4bytes * 16 values to make space for float values
   EEPROM.write(i, 0xFF); // 0xFF is the factory-default value (= 255)
  }
  Serial.println("EEPROM cleared");
