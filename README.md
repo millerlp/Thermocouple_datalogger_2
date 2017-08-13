@@ -8,6 +8,8 @@ Revision A uses the older MAX31855K chip, while Revision B uses the more
 recent MAX31856 that effectively superseded the MAX31855 series. Revision A
 isn't recommended for new builds. 
 
+![Assembled RevB board](/Parts/images/RevB_assembled_board.jpg)
+
 The directory `TempTracker` contains the primary files used to run a 
 datalogger board, while the `testing` directory contains various utilities
 used to test the basic functions of a datalogger board or to help calibrate
@@ -35,6 +37,7 @@ but the OLED display screens and thermocouple connectors need to be sourced
 elsewhere. 
 
 ![oled_screens_sm](/Parts/images/oled_screens_sm.jpg)
+
 For the OLED displays, any 128x64 pixel I2C SSD1306-based board should 
 work (typically 0.96" size). These are available from several vendors on sites like
 Amazon or Ebay. Be aware that there are I2C and SPI versions available, but this 
@@ -42,6 +45,7 @@ datalogger board will only communicate via I2C, so buying the 4-pin I2C version 
 display is sensible.
 
 ![Thermocouple connector](/Parts/images/Thermocouple_connector_sm.jpg)
+
 The thermocouple "miniature" connectors will need to be sourced from a 
 specialized vendor. The board is designed around Omega Engineering's PCC-SMP-V
 connectors, which come in a minimum size batch of 5, so you'll need to batches to 
