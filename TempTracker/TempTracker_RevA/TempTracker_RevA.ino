@@ -69,10 +69,14 @@
 // The values were generated from a linear regression fit through the sensor
 // temperatures and the known calibrator temperatures. 
 
-// Values for RevA1 board 1, calibrated on 2017-06-15
+// Default values, if there is not calibration done, should be 0 for tcOffset
+// and 1.0 for tcSlope. Do not change these, instead if you have calibration 
+// values they should be written to the board's EEPROM memory with the program
+// Store_calibration.ino, so that each board can have its own calibration data
+// onboard without having to update/change this main program.
 //                      Ch0         Ch1       Ch2         Ch3       Ch4         Ch5       Ch6         Ch7                  
-double tcOffset[] = {-0.2352983, 0.2763315,-0.2781568, 0.5066493, 0.1212014, 0.3781640,-0.1821470,-0.4756476}; 
-double tcSlope[] =  { 1.0027047, 0.9999684, 1.0021402, 1.0017356, 1.0011395, 1.0018918, 1.0018701, 1.0016286};
+double tcOffset[] = { 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000}; 
+double tcSlope[] =  { 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000};
 
 //********************************
 #define ERRLED A2		// Red error LED pin
@@ -182,7 +186,7 @@ byte pressCount = 0; // counter for number of button presses
 unsigned long prevMillis;	// counter for faster operations
 unsigned long newMillis;	// counter for faster operations
 
-
+float readout = NAN; // Reading back EEPROM calibration values
 bool saveData = false; // Flag to tell whether to carry out write operation on SD card
 bool oledScreenOn = true; // Flag to tell whether screens should be on/off
 bool writeFlag = false; // Flag to signal time to write data to SD card
@@ -378,6 +382,70 @@ void setup() {
     oled1.println(F("Starting.."));
     delay(1000);
   }
+
+//*******************************************************
+  // Read calibration coefficients from EEPROM, if present
+ for (int memEntry = 0; memEntry < 8; memEntry++){
+    // Read eeprom at memEntry address and store in readout
+    EEPROM_ReadFloat(&readout, memEntry);   
+    // Handle cases where the value coming back is 0xFFFFFFFF
+    // which is what happens if EEPROM was never written to.
+    if (isnan(readout)){
+      // If true, there was no value stored, so keep the 
+      // default value in tcOffset
+    } else if (!isnan(readout)){
+      // Now check if the numeric value that came back is
+      // within a reasonable range of values
+      if ( abs(readout - 0.00) < 3){
+        // If the readout value is within 3degrees C of 0,
+        // the readout value is probably usable
+        // Stick the value in the tcOffset array
+        tcOffset[memEntry] = readout;      
+      } else {
+        // If the readout value is way off the expected range
+        // then assume there's an error in the stored value
+        // and proceed with default offset of 0.0
+        tcOffset[memEntry] = 0.00000;
+      }
+    }
+ }
+ 
+  // Now read out memory positions 8-16, which should contain
+  // slope values for the calibration.
+  for (int memEntry = 8; memEntry < 16; memEntry++){
+    // Read eeprom at memEntry address and store in readout
+    EEPROM_ReadFloat(&readout, memEntry);   
+    // Handle cases where the value coming back is 0xFFFFFFFF
+    // which is what happens if EEPROM was never written to.
+    if (isnan(readout)){
+      // If true, there was no value stored, so keep the 
+      // default value in tcOffset
+    } else if (!isnan(readout)){
+      // Sanity check the slope value
+      if ( abs(readout - 1.00) < 0.5) {
+        // If the readout value for slope is with 0.5 of
+        // the ideal slope of 1.0, use the value from 
+        // readout. A difference from 1.0 this large is
+        // something to be extremely suspect of though,
+        // and you should double-check your calibration
+        // methods.
+        // Stick the value in the tcSlope array
+        tcSlope[memEntry-8] = readout;
+      } else {
+        // If the slope value returned in readout is very
+        // farm from the expected value of 1.0, assume that
+        // the value in EEPROM is invalid, and proceed with
+        // the default slope of 1.0. 
+        tcSlope[memEntry-8] = 1.000;
+      }
+    }
+ }
+ Serial.println(F("Using coefficients:"));
+ for (int i = 0; i < 8; i++){
+  Serial.print(tcOffset[i]);
+  Serial.print(F("\t"));
+  Serial.println(tcSlope[i]);
+ }
 
 //   Take 4 temperature measurements to initialize the array
   for (byte i = 0; i < AVG_WINDOW; i++){
