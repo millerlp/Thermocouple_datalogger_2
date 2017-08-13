@@ -19,8 +19,8 @@
  *  from the calibrator (on the y-axis), using any basic program
  *  like Excel that fits straight-line regressions (aka trendline).
  *  
- *  Ideally the intercept is 0.0 and the slope is 1.0, but individual 
- *  MAX31856 chips may end up with slight
+ *  Ideally the intercept (aka offset) is 0.0 and the slope is 1.0, 
+ *  but individual MAX31856 chips may end up with slight
  *  deviations from this. In that case, this program will write your
  *  calibration data to the EEPROM memory on board the TempTracker
  *  so that it will be available when the main TempTracker datalogging
