@@ -13,7 +13,11 @@
  *  known voltage into the TempTracker board. Use the sketch
  *  Calibration_routine_OLED_RevB to run these calibration trials.
  *  The calibration values should consist of a slope and intercept 
- *  (aka offset) for each MAX31856 channel. 
+ *  (aka offset) for each MAX31856 channel. These values could be
+ *  determined by fitting a linear regression between observed 
+ *  temperature on datalogger (on the x-axis) and expected temperature
+ *  from the calibrator (on the y-axis), using any basic program
+ *  like Excel that fits straight-line regressions (aka trendline).
  *  
  *  Ideally the intercept is 0.0 and the slope is 1.0, but individual 
  *  MAX31856 chips may end up with slight
