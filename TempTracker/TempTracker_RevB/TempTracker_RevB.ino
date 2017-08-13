@@ -35,7 +35,7 @@
 		Red flash every ~8 seconds: In brownout mode, data collection has stopped
 
 
-   If you get a compiler warning (not error) about involving
+   If you get a compiler warning (not error) involving
    "static EEPROMClass EEPROM;", you may safely ignore it. 
 
 */
@@ -487,48 +487,48 @@ void setup() {
   }
   // Take 4 temperature readings to initialize tempArray
   for (byte i = 0; i < AVG_WINDOW; i++){
-      for (byte j = 0; j < NUM_MAX31856; j++){
-        tempArray[i][j] = ((TempSensor[j]->readThermocoupleTemperature()) * tcSlope[j]) + tcOffset[j];
+      for (byte Channel = 0; Channel < NUM_MAX31856; Channel++){
+        tempArray[i][Channel] = ((TempSensor[Channel]->readThermocoupleTemperature()) * tcSlope[Channel]) + tcOffset[Channel];
         delay(15); // Delay a bit so that by the time you get back to 
                    // reading the same thermocouple again, at least 100ms
                    // has elapsed
       }
   }
 
-  // Now calculate the average of the 4 readings for each sensor i
-  for (byte i = 0; i<8; i++){
+  // Now calculate the average of the 4 readings for each sensor Channel
+  for (byte Channel = 0; Channel<8; Channel++){
     double tempsum = 0;
     for (byte j = 0; j < AVG_WINDOW; j++){
-      // Add up j measurements for sensor i
-      tempsum += tempArray[j][i];
+      // Add up j measurements for sensor Channel
+      tempsum += tempArray[j][Channel];
     }
-    // Calculate average temperature for sensor i
-    tempAverages[i] = tempsum / double(AVG_WINDOW); // cast denominator as double
+    // Calculate average temperature for sensor Channel
+    tempAverages[Channel] = tempsum / double(AVG_WINDOW); // cast denominator as double
   }
   // Make a copy of the 1st set of averages for use later in main loop
-  for (byte i = 0; i < 8; i++){
-    prevAverages[i] = tempAverages[i];
+  for (byte Channel = 0; Channel < 8; Channel++){
+    prevAverages[Channel] = tempAverages[Channel];
   }
   // Show the first set of temperature readings:
   oled1.home();
   oled1.set2X();
   oled1.clearToEOL();
-  for (byte i = 0; i < 4; i++){
+  for (byte Channel = 0; Channel < 4; Channel++){
     oled1.clearToEOL();
     oled1.print(F("Ch"));
-    oled1.print(i);
+    oled1.print(Channel);
     oled1.print(F(": "));
-    oled1.print(tempAverages[i]);
+    oled1.print(tempAverages[Channel]);
     oled1.println(F("C"));
   }
   oled2.home();
   oled2.set2X();
-  for (byte i = 4; i < 8; i++){
+  for (byte Channel = 4; Channel < 8; Channel++){
     oled2.clearToEOL();
     oled2.print(F("Ch"));
-    oled2.print(i);
+    oled2.print(Channel);
     oled2.print(F(": "));
-    oled2.print(tempAverages[i]);
+    oled2.print(tempAverages[Channel]);
     oled2.println(F("C"));
   } 
 
@@ -642,7 +642,7 @@ void loop() {
 				oldtime = newtime; // update oldtime
         writeFlag = true; // set flag to write data to SD				
         // This will force a SD card write at the SAVE_INTERVAL (seconds)
-			}
+		 }
 
       if (loopCount >= AVG_WINDOW){
         loopCount = 0; // reset to begin writing at start of array
@@ -729,22 +729,22 @@ void loop() {
           oled1.home();
           oled1.set2X();
           oled1.clearToEOL();
-          for (byte i = 0; i < 4; i++){
+          for (byte Channel = 0; Channel < 4; Channel++){
             oled1.clearToEOL();
             oled1.print(F("Ch"));
-            oled1.print(i);
+            oled1.print(Channel);
             oled1.print(F(": "));
-            oled1.print(tempAverages[i]);
+            oled1.print(tempAverages[Channel]);
             oled1.println(F("C"));
           }
           oled2.home();
           oled2.set2X();
-          for (byte i = 4; i < 8; i++){
+          for (byte Channel = 4; Channel < 8; Channel++){
             oled2.clearToEOL();
             oled2.print(F("Ch"));
-            oled2.print(i);
+            oled2.print(Channel);
             oled2.print(F(": "));
-            oled2.print(tempAverages[i]);
+            oled2.print(tempAverages[Channel]);
             oled2.println(F("C"));
           } 
         } // end of if (rtc.now() - checkTime > 5){ 
@@ -757,8 +757,8 @@ void loop() {
             printTempToOLEDs(oled1,oled2,tempAverages,prevAverages);
           } // end of if (oledScreenOn)
           // Update the old prevAverages with these new tempAverages
-          for (byte i = 0; i < 8; i++){
-            prevAverages[i] = tempAverages[i];
+          for (byte Channel = 0; Channel < 8; Channel++){
+            prevAverages[Channel] = tempAverages[Channel];
           }
         } // end of if (loopCount >= (SAMPLES_PER_SECOND - 1))   
       }  // end of if (button1Flag)              
