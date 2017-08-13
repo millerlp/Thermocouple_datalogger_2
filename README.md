@@ -1,11 +1,12 @@
 ## Thermocouple_datalogger_2
 ### Luke Miller 2017
 
-This repository contains code to run a redesigned 8-channel thermocouple
+This repository contains code to run a 8-channel thermocouple
 datalogger based on Arduino-type hardware. Currently there are 2 revisions,
 A and B, which differ in the type of thermocouple-to-digital chip they use.
 Revision A uses the older MAX31855K chip, while Revision B uses the more
-recent MAX31856 that effectively superseded the MAX31855 series. 
+recent MAX31856 that effectively superseded the MAX31855 series. Revision A
+isn't recommended for new builds. 
 
 The directory `TempTracker` contains the primary files used to run a 
 datalogger board, while the `testing` directory contains various utilities
@@ -18,6 +19,32 @@ a board.
 * https://github.com/millerlp/RTClib - to run the onboard real time clock chip DS3231M
 * https://github.com/greiman/SdFat - for reading/writing SD cards
 * https://github.com/greiman/SSD1306Ascii - for writing to OLED displays
+
+## Hardware designs
+
+Eagle `.sch` and `.brd` design files are provided in the `Eagle_files` directory, along
+with images of the designs. 
+
+## Parts list
+
+See the file `Thermocouple_datalogger_parts.xlsx` in the `Parts` directory for a 
+list of all of the chips and other parts needed to build a board. There are 
+separate sheets for Revision A and B, be careful to use the appropriate sheet. The 
+majority of the parts should be available from a single vendor such as Digikey.com,
+but the OLED display screens and thermocouple connectors need to be sourced 
+elsewhere. 
+
+For the OLED displays, any 128x64 pixel I2C SSD1306-based board should 
+work (typically 0.96" size). These are available from several vendors on sites like
+Amazon or Ebay. Be aware that there are I2C and SPI versions available, but this 
+datalogger board will only communicate via I2C, so buying the 4-pin I2C version of the
+display is sensible.
+
+The thermocouple "miniature" connectors will need to be sourced from a 
+specialized vendor. The board is designed around Omega Engineering's PCC-SMP-V
+connectors, which come in a minimum size batch of 5, so you'll need to batches to 
+get 8. If you don't forsee needing to ever unplug a thermocouple, you could solder the
+leads directly the board, forgoing the Omega connector. 
 
 ## Calibrating
 The MAX3185x thermocouple chips are relatively accurate from the factory, and for
