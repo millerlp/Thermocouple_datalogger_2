@@ -58,10 +58,42 @@ void setup()
   EEPROM_WriteFloat(&tcSlope[i], (i+shiftAddr));
  } 
 
-  // Read the results back out to show that the writing worked
+// Read the results back out to show that the writing worked
  for (int memEntry = 0; memEntry < 16; memEntry++){
-  EEPROM_ReadFloat(&readout, memEntry);   
-  Serial.println(readout, DEC);   
+  EEPROM_ReadFloat(&readout, memEntry);
+  if (memEntry < 8){
+    if (memEntry == 0) Serial.println("Checking tcOffset");
+    if ( abs(readout - tcOffset[memEntry]) < 0.00001){
+      // If the difference between readout and original tcOffset value
+      // is small, this was successful.
+      Serial.print(readout,DEC);
+      Serial.print("\t");
+      Serial.print( tcOffset[memEntry],DEC);
+      Serial.println("\t MATCH");
+    } else {
+      Serial.print(readout,DEC);
+      Serial.print("\t");
+      Serial.print( tcOffset[memEntry],DEC);
+      Serial.println("\t NO MATCH");
+    }
+  } else if (memEntry >= 8) {
+    if (memEntry == 8) Serial.println("Checking tcSlope");
+    // Now check against the tcSlope values
+    if ( abs(readout - tcSlope[(memEntry-8)]) < 0.00001){
+      // If the difference between readout and original tcSlope value
+      // is small, this was successful.
+      Serial.print(readout,DEC);
+      Serial.print("\t");
+      Serial.print( tcSlope[(memEntry-8)],DEC);
+      Serial.println("\t MATCH");
+    } else {
+      Serial.print(readout,DEC);
+      Serial.print("\t");
+      Serial.print( tcSlope[(memEntry-8)],DEC);
+      Serial.println("\t NO MATCH");
+    }
+  }
+  
  }
  
 } // end of setup()
