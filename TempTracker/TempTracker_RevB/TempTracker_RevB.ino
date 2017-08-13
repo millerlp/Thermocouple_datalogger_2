@@ -23,6 +23,10 @@
   MAX31856 thermocouple sensors. By default
   this program will start running and saving data to the SD 
   card automatically. 
+
+  To see current data file name while datalogging is going on, press 
+  Button1 for >1 second and release. The filename will be displayed
+  on the OLED screen for 5 seconds. 
   	
 	Closing a data file safely:
 		1. Hold button 1 down for at least 7 seconds, then release it.
