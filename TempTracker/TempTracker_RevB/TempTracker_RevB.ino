@@ -398,36 +398,62 @@ void setup() {
     delay(1000);
   }
 
-  //****************************************
+  //*******************************************************
   // Read calibration coefficients from EEPROM, if present
  for (int memEntry = 0; memEntry < 8; memEntry++){
-  // Read eeprom at memEntry address and store in readout
-  EEPROM_ReadFloat(&readout, memEntry);   
-  // Handle cases where the value coming back is 0xFFFFFFFF
-  // which is what happens if EEPROM was never written to.
-  if (isnan(readout)){
-    // If true, there was no value stored, so keep the 
-    // default value in tcOffset
-  } else if (!isnan(readout)){
-    // Stick the value in the tcOffset array
-    tcOffset[memEntry] = readout;
-  }
+    // Read eeprom at memEntry address and store in readout
+    EEPROM_ReadFloat(&readout, memEntry);   
+    // Handle cases where the value coming back is 0xFFFFFFFF
+    // which is what happens if EEPROM was never written to.
+    if (isnan(readout)){
+      // If true, there was no value stored, so keep the 
+      // default value in tcOffset
+    } else if (!isnan(readout)){
+      // Now check if the numeric value that came back is
+      // within a reasonable range of values
+      if ( abs(readout - 0.00) < 3){
+        // If the readout value is within 3degrees C of 0,
+        // the readout value is probably usable
+        // Stick the value in the tcOffset array
+        tcOffset[memEntry] = readout;      
+      } else {
+        // If the readout value is way off the expected range
+        // then assume there's an error in the stored value
+        // and proceed with default offset of 0.0
+        tcOffset[memEntry] = 0.00000;
+      }
+    }
  }
  
   // Now read out memory positions 8-16, which should contain
   // slope values for the calibration.
   for (int memEntry = 8; memEntry < 16; memEntry++){
-  // Read eeprom at memEntry address and store in readout
-  EEPROM_ReadFloat(&readout, memEntry);   
-  // Handle cases where the value coming back is 0xFFFFFFFF
-  // which is what happens if EEPROM was never written to.
-  if (isnan(readout)){
-    // If true, there was no value stored, so keep the 
-    // default value in tcOffset
-  } else if (!isnan(readout)){
-    // Stick the value in the tcOffset array
-    tcSlope[memEntry-8] = readout;
-  }
+    // Read eeprom at memEntry address and store in readout
+    EEPROM_ReadFloat(&readout, memEntry);   
+    // Handle cases where the value coming back is 0xFFFFFFFF
+    // which is what happens if EEPROM was never written to.
+    if (isnan(readout)){
+      // If true, there was no value stored, so keep the 
+      // default value in tcOffset
+    } else if (!isnan(readout)){
+      // Sanity check the slope value
+      if ( abs(readout - 1.00) < 0.5) {
+        // If the readout value for slope is with 0.5 of
+        // the ideal slope of 1.0, use the value from 
+        // readout. A difference from 1.0 this large is
+        // something to be extremely suspect of though,
+        // and you should double-check your calibration
+        // methods.
+        // Stick the value in the tcSlope array
+        tcSlope[memEntry-8] = readout;
+      } else {
+        // If the slope value returned in readout is very
+        // farm from the expected value of 1.0, assume that
+        // the value in EEPROM is invalid, and proceed with
+        // the default slope of 1.0. 
+        tcSlope[memEntry-8] = 1.000;
+      }
+    }
  }
  Serial.println(F("Using coefficients:"));
  for (int i = 0; i < 8; i++){
