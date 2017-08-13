@@ -1,7 +1,9 @@
 /* TempTracker_RevB.ino
 	Copyright Luke Miller 2017
 
-  TODO: Implement screen power down and button to wake screens
+  TODO: Implement screen power down and button to wake screens if a longer
+  sampling interval than 5 seconds is selected. This change would also require
+  altering the MAX31856 library to change from autoconvert to one-shot mode.
   
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -550,6 +552,7 @@ void setup() {
 	mainState = STATE_DATA; // Start the main loop in data-taking state
 }
 
+//*************************Main loop************************************
 //*************************Main loop************************************
 void loop() {
 	// Always start the loop by checking the time
