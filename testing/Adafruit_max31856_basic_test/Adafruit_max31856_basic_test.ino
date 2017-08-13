@@ -10,7 +10,7 @@ void setup() {
   Serial.println("MAX31856 thermocouple test");
 
   max.begin();
-
+ 
   max.setThermocoupleType(MAX31856_TCTYPE_K);
 
   Serial.print("Thermocouple type: ");
