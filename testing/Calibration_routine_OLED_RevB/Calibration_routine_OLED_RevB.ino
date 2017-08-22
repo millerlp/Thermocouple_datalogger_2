@@ -12,7 +12,8 @@
  *   The user will use buttons 1 and 2 to select
  *   a thermocouple channel to calibrate. Output will be
  *   written to csv files, including the known temperature,
- *   recorded temperature, and channel number.
+ *   recorded temperature, channel number, and cold junction 
+ *   (internal) temperature.
  * 
  * 
  */
@@ -61,15 +62,8 @@ const byte chipSelect = 10; // define the Chip Select pin for SD card
 #define CS_MAX5 4 // Arduino pin PD4, digital 4, Chip Select for MAX31855 #5
 #define CS_MAX6 9 // Arduino pin PB1, digital 9, Chip Select for MAX31855 #6
 #define CS_MAX7 8 // Arduino pin PB0, digital 8, Chip Select for MAX31855 #7
-//#define SCK    13
-//#define SDI    11
-//#define SDO    12
-//#define CR0_INIT  (CR0_AUTOMATIC_CONVERSION + CR0_OPEN_CIRCUIT_FAULT_TYPE_K /* + CR0_NOISE_FILTER_50HZ */)
-//#define CR1_INIT  (CR1_AVERAGE_2_SAMPLES + CR1_THERMOCOUPLE_TYPE_K)
-//#define MASK_INIT (~(MASK_VOLTAGE_UNDER_OVER_FAULT + MASK_THERMOCOUPLE_OPEN_FAULT))
-#define NUM_MAX31856  8 // 8 thermocouple channels
 
-//Adafruit_MAX31856 max0 = Adafruit_MAX31856(CS_MAX0);
+#define NUM_MAX31856  8 // 8 thermocouple channels
 
 // Create the temperature object, defining the pins used for communication
 Adafruit_MAX31856 *TempSensor[NUM_MAX31856] = {
@@ -84,7 +78,7 @@ Adafruit_MAX31856 *TempSensor[NUM_MAX31856] = {
 };
 
 double temp[SAMPLES]; // temperature array
-
+double CJtemp[SAMPLES]; // cold junction temperature array
 // Define the set of simulated temperatures that will be provided
 // by the thermocouple calibrator
 byte testTemps[] = {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50};
@@ -143,14 +137,6 @@ void setup() {
 
 //-----------------------------------------------------
 // Initialize the MAX31856 thermocouple chips  
-
-//  // Initializing the MAX31855's registers
-//  for (int i=0; i<NUM_MAX31856; i++) {
-//    TempSensor[i]->writeRegister(REGISTER_CR0, CR0_INIT);
-//    TempSensor[i]->writeRegister(REGISTER_CR1, CR1_INIT);
-//    TempSensor[i]->writeRegister(REGISTER_MASK, MASK_INIT);
-//  }
-
   for (int i=0; i<NUM_MAX31856;i++){
     TempSensor[i]->begin();
     TempSensor[i]->setThermocoupleType(MAX31856_TCTYPE_K);
@@ -362,50 +348,10 @@ void loop() {
              // Take a reading to show on the screen
             currTemp = TempSensor[Channel]->readThermocoupleTemperature();
             internalTemp = TempSensor[Channel]->readCJTemperature(); 
-//            switch(Channel){
-//              case 0:
-//                currTemp = max0.readThermocoupleTemperature();
-//                internalTemp = max0.readCJTemperature();
-////                currTemp = TemperatureSensor[0]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[0]->readJunction(CELSIUS);
-//              break;
-//              case 1:
-////                currTemp = TemperatureSensor[1]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[1]->readJunction(CELSIUS);
-//              break;
-//              case 2:
-////                currTemp = TemperatureSensor[2]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[2]->readJunction(CELSIUS);
-//              break;
-//              case 3:
-////                currTemp = TemperatureSensor[3]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[3]->readJunction(CELSIUS);
-//              break;
-//              case 4:
-////                currTemp = TemperatureSensor[4]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[4]->readJunction(CELSIUS);
-//              break;
-//              case 5:
-////                currTemp = TemperatureSensor[5]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[5]->readJunction(CELSIUS);
-//              break;
-//              case 6:
-////                currTemp = TemperatureSensor[6]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[6]->readJunction(CELSIUS);
-//              break;            
-//              case 7:
-////                currTemp = TemperatureSensor[7]->readThermocouple(CELSIUS);
-////                internalTemp = TemperatureSensor[7]->readJunction(CELSIUS);
-//              break;
-//            }
-            // Apply the temperature correction. Function is in 
-            // the library TClib2
-//            double correctedTemp = correctTemp(currTemp, internalTemp);
-            
+          
             // Update the screen
             oled1.set2X();
             oled1.clear(48,128,6,7);
-//            oled1.print(correctedTemp);
             oled1.print(currTemp);
             oled1.print(F(" C"));
 
@@ -444,6 +390,7 @@ void loop() {
     // Now read appropriate channel
     for (int i = 0; i < SAMPLES; i++){
       temp[i] = TempSensor[Channel]->readThermocoupleTemperature();
+      CJtemp[i] = TempSensor[Channel]->readCJTemperature();
       oled2.setCursor(0,2);
       oled2.clearToEOL();
       oled2.print(temp[i]);
@@ -452,116 +399,9 @@ void loop() {
       Serial.println(temp[i]);
       delay(500);  
     }
-//    switch(Channel){
-//      case 0:
-//        for (int i = 0; i < SAMPLES; i++){
-//          
-//          temp[i] = max0.readThermocoupleTemperature();
-////          temp[i] = TemperatureSensor[0]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple0.readCelsius(),thermocouple0.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 1:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[1]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple1.readCelsius(),thermocouple1.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 2:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[2]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple2.readCelsius(),thermocouple2.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break; 
-//      case 3:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[3]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple3.readCelsius(),thermocouple3.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 4:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[4]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple4.readCelsius(),thermocouple4.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 5:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[5]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple5.readCelsius(),thermocouple5.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 6:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[6]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple6.readCelsius(),thermocouple6.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;
-//      case 7:
-//        for (int i = 0; i < SAMPLES; i++){
-////          temp[i] = TemperatureSensor[7]->readThermocouple(CELSIUS);
-////          temp[i] = correctTemp(thermocouple7.readCelsius(),thermocouple7.readInternal());
-//          oled2.setCursor(0,2);
-//          oled2.clearToEOL();
-//          oled2.print(temp[i]);          
-//          Serial.print(targetTemp);
-//          Serial.print(F("\t"));
-//          Serial.println(temp[i]);
-//          delay(500);         
-//        }
-//      break;                                       
-//    }
+
     // Write temp array to SD card
-    writeCalibSD(targetTemp,temp);
+    writeCalibSD(targetTemp,temp,CJtemp);
     // Increment tempCounter
     ++tempCounter;
     Serial.println(F("Moving to next temperature"));
@@ -601,7 +441,7 @@ void loop() {
 //---------writeCalibSD-----------------------
 // A function to write the current targetTemp and temperature to the 
 // csv file
-void writeCalibSD (float targetTemp, double *temp){
+void writeCalibSD (float targetTemp, double *temp, double *CJtemp){
     // Reopen logfile. If opening fails, notify the user
   if (!calibfile.isOpen()) {
     if (!calibfile.open(calibFilename, O_RDWR | O_CREAT | O_AT_END)) {
@@ -613,7 +453,9 @@ void writeCalibSD (float targetTemp, double *temp){
     calibfile.print(F(","));
     calibfile.print(temp[i],3);  // write 3 sig figs   
     calibfile.print(F(","));
-    calibfile.println(Channel);
+    calibfile.print(Channel);
+    calibfile.print(F(","));
+    calibfile.println(CJtemp[i],3);
   }
 }
 
@@ -725,7 +567,7 @@ void initCalibFile(DateTime time1, byte Channel){
         calibfile.timestamp(T_ACCESS, time1.year(), time1.month(), time1.day(), 
                                     time1.hour(), time1.minute(), time1.second());        
         // Write column headers
-        calibfile.println(F("TargetTempC,BoardTempC,Channel"));
+        calibfile.println(F("TargetTempC,BoardTempC,Channel,ColdJunctionTempC"));
         calibfile.close();
 }
 
