@@ -79,7 +79,7 @@
 // The values were generated from a linear regression fit through the sensor
 // temperatures and the known calibrator temperatures. 
 
-// Default values, if there is not calibration done, should be 0 for tcOffset
+// Default values, if there is no calibration done, should be 0 for tcOffset
 // and 1.0 for tcSlope. Do not change these, instead if you have calibration 
 // values they should be written to the board's EEPROM memory with the program
 // Store_calibration.ino, so that each board can have its own calibration data
@@ -463,9 +463,9 @@ void setup() {
  }
  Serial.println(F("Using coefficients:"));
  for (int i = 0; i < 8; i++){
-  Serial.print(tcOffset[i]);
+  Serial.print(tcOffset[i],4);
   Serial.print(F("\t"));
-  Serial.println(tcSlope[i]);
+  Serial.println(tcSlope[i],6);
  }
   
   // Initialize the temperature sensor chips
@@ -659,8 +659,8 @@ void loop() {
         tempArray[loopCount][Channel] = ((TempSensor[Channel]->readThermocoupleTemperature()) * tcSlope[Channel]) + tcOffset[Channel];
       }
 
-      // Calculate the average of the readings for each sensor i
-      for (byte Channel = 0; Channel < 8; Channel++){
+      // Calculate the average of the readings for each sensor j
+      for (byte Channel = 0; Channel < NUM_MAX31856; Channel++){
         double tempsum = 0;
         for (byte j = 0; j < AVG_WINDOW; j++){
           // Add up j measurements for sensor 
