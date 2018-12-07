@@ -48,7 +48,7 @@ display is sensible.
 
 The thermocouple "miniature" connectors will need to be sourced from a 
 specialized vendor. The board is designed around Omega Engineering's PCC-SMP-V
-connectors, which come in a minimum size batch of 5, so you'll need to batches to 
+connectors, which come in a minimum size batch of 5, so you'll need two batches to 
 get 8. If you don't forsee needing to ever unplug a thermocouple, you could solder the
 leads directly the board, forgoing the Omega connector. 
 
