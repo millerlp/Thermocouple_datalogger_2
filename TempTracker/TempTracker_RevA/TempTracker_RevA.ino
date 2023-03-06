@@ -284,7 +284,7 @@ void setup() {
   oled2.print(timebuf);
   
 	Serial.println();
-	if ( (newtime.year() < 2021) | (newtime.year() > 2035) ) {
+	if ( (newtime.year() < 2023) | (newtime.year() > 2035) ) {
 		// There is an error with the clock, halt everything
     oled1.home();
     oled1.clear();
