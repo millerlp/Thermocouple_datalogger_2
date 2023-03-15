@@ -82,7 +82,7 @@ double tcSlope[] =  { 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0
 #define ERRLED A2		// Red error LED pin
 #define GREENLED A3		// Green LED pin
 #define BUTTON1 2 		// BUTTON1 on INT0, pin PD2
-#define BUTTON2 3     // BUTTON2 on INT1, pin PD3
+//#define BUTTON2 3     // BUTTON2 on INT1, pin PD3
 
 // Comment out the following line to remove parts of the
 // test code from functioning. 
@@ -171,15 +171,16 @@ DateTime newtime; // used to track time in main loop
 DateTime oldtime; // used to track time in main loop
 byte SPS = SAMPLES_PER_SECOND; 
 
+
 DateTime buttonTime; // hold the time since the button was pressed
 DateTime chooseTime; // hold the time stamp when a waiting period starts
 DateTime checkTime; // hold time stamp when a button press debounce is updated
-DateTime calibEnterTime; // hold the time stamp when calibration mode is entered
+
 volatile unsigned long button1Time; // hold the initial button1 press millis() value
-volatile unsigned long button2Time; // hold the initial button2 press millis() value
+//volatile unsigned long button2Time; // hold the initial button2 press millis() value
 byte debounceTime = 20; // milliseconds to wait for debounce
 volatile bool button1Flag = false; // Flag to mark when button1 was pressed
-volatile bool button2Flag = false; // Flag to mark when button2 was pressed
+//volatile bool button2Flag = false; // Flag to mark when button2 was pressed
 byte mediumPressTime = 2; // seconds to hold button1 to register a medium press
 byte longPressTime = 5; // seconds to hold button1 to register a long press
 byte pressCount = 0; // counter for number of button presses
@@ -202,11 +203,11 @@ void setup() {
 	// Set button1 as an input
 	pinMode(BUTTON1, INPUT_PULLUP);
   // Set button2 as an input
-  pinMode(BUTTON2, INPUT_PULLUP);
+//  pinMode(BUTTON2, INPUT_PULLUP);
 	// Register an interrupt on INT0, attached to button1
 	// which will call buttonFunc when the button is pressed.
 	attachInterrupt(digitalPinToInterrupt(BUTTON1), button1Func, LOW);
-  attachInterrupt(digitalPinToInterrupt(BUTTON2), button2Func, LOW);
+//  attachInterrupt(digitalPinToInterrupt(BUTTON2), button2Func, LOW);
 	// Set up the LEDs as output
 	pinMode(ERRLED,OUTPUT);
 	digitalWrite(ERRLED, LOW);
@@ -246,25 +247,26 @@ void setup() {
 	Serial.println(F("Hello"));
 	Serial.println();
 #endif
-
-
+  Wire.begin();
+  Wire.setClock(400000L);
   //----------------------------------
   // Start up the oled displays
   oled1.begin(&Adafruit128x64, I2C_ADDRESS1);
-  oled1.set400kHz();  
+//  oled1.set400kHz();  
   oled1.setFont(Adafruit5x7);    
   oled1.clear(); 
   oled1.print(F("Hello"));
   // Start up the 2nd oled display
   oled2.begin(&Adafruit128x64, I2C_ADDRESS2);
-  oled2.set400kHz();  
+//  oled2.set400kHz();  
   oled2.setFont(Adafruit5x7);    
   oled2.clear();
+  oled2.print(F("Hello"));
   //----------------------------------
   bool rtcErrorFlag = false;
 
 	// Initialize the real time clock DS3231M
-	Wire.begin();	// Start the I2C library with default options
+//	Wire.begin();	// Start the I2C library with default options
 	rtc.begin();	// Start the rtc object with default options
 	newtime = rtc.now(); // read a time from the real time clock
   newtime.toString(buf, 20); 
@@ -360,6 +362,9 @@ void setup() {
     Serial.print(F("Writing to "));
     Serial.println(filename);
     delay(5);
+    Serial.print(F("Free ram: "));
+    Serial.println(freeRam());
+    delay(10);
 #endif
     oled1.home();
     oled1.set1X();
@@ -423,7 +428,7 @@ void setup() {
     } else if (!isnan(readout)){
       // Sanity check the slope value
       if ( abs(readout - 1.00) < 0.5) {
-        // If the readout value for slope is with 0.5 of
+        // If the readout value for slope is within 0.5 of
         // the ideal slope of 1.0, use the value from 
         // readout. A difference from 1.0 this large is
         // something to be extremely suspect of though,
@@ -433,7 +438,7 @@ void setup() {
         tcSlope[memEntry-8] = readout;
       } else {
         // If the slope value returned in readout is very
-        // farm from the expected value of 1.0, assume that
+        // far from the expected value of 1.0, assume that
         // the value in EEPROM is invalid, and proceed with
         // the default slope of 1.0. 
         tcSlope[memEntry-8] = 1.000;
@@ -446,6 +451,9 @@ void setup() {
   Serial.print(F("\t"));
   Serial.println(tcSlope[i]);
  }
+  
+
+ 
 
 //   Take 4 temperature measurements to initialize the array
   for (byte i = 0; i < AVG_WINDOW; i++){
@@ -805,13 +813,13 @@ void button1Func (void){
 	// interrupt will still be disabled. 
 }
 
-void button2Func (void){
-  detachInterrupt(digitalPinToInterrupt(BUTTON2)); // Turn off the interrupt
-  button2Time = millis(); // Grab the current elapsed time
-  debounceState = DEBOUNCE_STATE_CHECK; // Switch to new debounce state
-  // Execution will now return to wherever it was interrupted, and this
-  // interrupt will still be disabled. 
-}
+//void button2Func (void){
+//  detachInterrupt(digitalPinToInterrupt(BUTTON2)); // Turn off the interrupt
+//  button2Time = millis(); // Grab the current elapsed time
+//  debounceState = DEBOUNCE_STATE_CHECK; // Switch to new debounce state
+//  // Execution will now return to wherever it was interrupted, and this
+//  // interrupt will still be disabled. 
+//}
 
 
 
