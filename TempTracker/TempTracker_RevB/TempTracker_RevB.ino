@@ -274,7 +274,7 @@ void setup() {
 	Wire.begin();	// Start the I2C library with default options
 	rtc.begin();	// Start the rtc object with default options
 	newtime = rtc.now(); // read a time from the real time clock
-  newtime.toString(buf, 20); 
+  newtime.toString(buf); 
   // Now extract the time by making another character pointer that
   // is advanced 10 places into buf to skip over the date. 
   char *timebuf = buf + 10;
@@ -699,7 +699,7 @@ void loop() {
         // current time, or reset the screens to show temperature data
         // depending on how long it's been. 
         if ( (newtime.unixtime() - checkTime.unixtime()) < 5){
-          newtime.toString(buf, 20); 
+          newtime.toString(buf); 
           // Now extract the time by making another character pointer that
           // is advanced 10 places into buf to skip over the date. 
           char *timebuf = buf + 10;
