@@ -136,7 +136,8 @@ SSD1306AsciiWire oled2; // create OLED display object, using I2C Wire
 //*************
 // Create real time clock object
 RTC_DS3231 rtc;
-char buf[20]; // declare a string buffer to hold the time result
+
+char buf[] = "YYYY-MM-DD hh:mm:ss"; // declare a string buffer to hold the time result, using the format specified in RTClib
 
 //*************
 // Create sd card objects
